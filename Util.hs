@@ -12,3 +12,7 @@ fOr x = any ($x)
 
 tuplify2 :: [a] -> (a,a)
 tuplify2 [x,y] = (x,y)
+
+if' :: Bool -> a -> a -> a
+if' True x _ = x
+if' False _ y = y
