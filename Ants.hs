@@ -64,10 +64,16 @@ data Tile = AntTile Owner
           | Unknown
           deriving (Show,Eq)
 
+data Visibility = 
+    Observed
+  | Predicted
+  | Unobserved
+  deriving (Show, Eq)
+
 -- | Elements of the world
 data MetaTile = MetaTile
   { tile :: Tile
-  , visible :: Bool
+  , visible :: Visibility
   } deriving (Show)
 
 isAnt, isDead, isAntEnemy, isDeadEnemy :: Tile -> Bool
@@ -104,22 +110,23 @@ renderTile m
   | otherwise = "*"
   where
     visibleUpper :: MetaTile -> Char -> String
-    visibleUpper mt c
-      | visible mt = [toUpper c]
-      | otherwise  = [c]
+    visibleUpper mt c =
+      case visible mt of
+        Observed -> [toUpper c]
+        _ -> [c]
 
 -- | Sets the tile to visible, if the tile is still unknown then it is land.
 visibleMetaTile :: MetaTile -> MetaTile
 visibleMetaTile m
-  | tile m == Unknown = MetaTile {tile = Land, visible = True}
-  | otherwise         = MetaTile {tile = tile m, visible = True}
+  | tile m == Unknown = MetaTile {tile = Land, visible = Observed}
+  | otherwise         = MetaTile {tile = tile m, visible = Observed}
 
 -- | Resets tile to land if it is currently occupied by food or ant
 --   and makes the tile invisible.
 clearMetaTile :: MetaTile -> MetaTile
 clearMetaTile m
-  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = False}
-  | otherwise = MetaTile {tile = tile m, visible = False}
+  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = Unobserved}
+  | otherwise = MetaTile {tile = tile m, visible = Unobserved}
 
 --------------------------------------------------------------------------------
 -- Immutable World -------------------------------------------------------------
@@ -351,11 +358,11 @@ updateGameState vp gs s
     toPoint = tuplify2.map read.words
     writeTile w p t = runSTArray $ do
       w' <- unsafeThaw w
-      writeArray w' p MetaTile {tile = t, visible = True}
+      writeArray w' p MetaTile {tile = t, visible = Observed }
       return w'
 
 initialWorld :: GameParams -> World
-initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = False}
+initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = Unobserved}
 
 createParams :: [(String, String)] -> GameParams
 createParams s =
