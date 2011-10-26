@@ -15,7 +15,7 @@ tryOrder w = find (passable w)
 generateOrders :: Ant -> [Order]
 generateOrders a = map (Order a) [North .. West]
 
-{- | 
+{- |
  - Implement this function to create orders.
  - It uses the IO Monad so algorithms can call timeRemaining.
  -
@@ -38,5 +38,3 @@ doTurn gp gs = do
 -- | This runs the game
 main :: IO ()
 main = game doTurn
-
--- vim: set expandtab:

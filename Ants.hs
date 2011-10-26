@@ -10,52 +10,41 @@ module Ants
   , World
 
     -- Utility functions
-  , myAnts -- return list of my Ants
-  , enemyAnts -- return list of visible enemy Ants
+  , myAnts
+  , enemyAnts
   , passable
   , distance
   , timeRemaining
 
     -- main function
   , game
-
-  -- TODO implement the following functions according to the starter pack guide
-  --, direction
   ) where
 
+import Control.Applicative
+import Control.Monad.ST
+
 import Data.Array
-import Data.List (isPrefixOf)
+import Data.Array.ST
+import Data.List (isPrefixOf, foldl')
 import Data.Char (digitToInt, toUpper)
 import Data.Maybe (fromJust)
-import Control.Applicative
+
 import Data.Time.Clock
 import System.IO
 
--- type synonyms
+import Util
+
+timeRemaining :: GameState -> IO NominalDiffTime
+timeRemaining gs = do
+  timeNow <- getCurrentTime
+  return $ timeNow `diffUTCTime` startTime gs
+
+--------------------------------------------------------------------------------
+-- Points ----------------------------------------------------------------------
+--------------------------------------------------------------------------------
 type Row = Int
 type Col = Int
 type Point = (Row, Col)
-type Food = Point
-type World = Array Point MetaTile
-data Visible = Observed | Unobserved | Predicted deriving (Show)
-
-colBound :: World -> Col
-colBound = col . snd . bounds
-
-rowBound :: World -> Row
-rowBound = row . snd . bounds
-
--- Takes the modulus of the indices before accessing the array
-(%!) :: World -> Point -> MetaTile
-(%!) w p = w ! (w %!% p)
-
-(%!%) :: World -> Point -> Point
-(%!%) w p = 
-  let modCol = 1 + colBound w
-      modRow = 1 + rowBound w
-      ixCol  = col p `mod` modCol
-      ixRow  = row p `mod` modRow
-  in (ixRow, ixCol)
 
 row :: Point -> Row
 row = fst
@@ -63,30 +52,189 @@ row = fst
 col :: Point -> Col
 col = snd
 
--- Objects appearing on the map
-data Tile = MyTile 
-          | Enemy1Tile 
-          | Enemy2Tile 
-          | Enemy3Tile 
-          | Dead 
-          | Land 
-          | FoodTile 
-          | Water 
-          | Unknown 
-          deriving (Show,Eq,Enum,Bounded)
+--------------------------------------------------------------------------------
+-- Tiles -----------------------------------------------------------------------
+--------------------------------------------------------------------------------
+data Tile = AntTile Owner
+          | Dead Owner
+          | HillTile Owner
+          | Land
+          | FoodTile
+          | Water
+          | Unknown
+          deriving (Show,Eq)
 
+-- | Elements of the world
 data MetaTile = MetaTile
   { tile :: Tile
-  , visible :: Visible
+  , visible :: Bool
   } deriving (Show)
 
-data Owner = Me | Enemy1 | Enemy2 | Enemy3 deriving (Show,Eq,Bounded,Enum)
+isAnt, isDead, isAntEnemy, isDeadEnemy :: Tile -> Bool
+isAnt (AntTile _) = True
+isAnt _ = False
+
+isDead (Dead _) = True
+isDead _ = False
+
+isHill (HillTile _) = True
+isHill _ = False
+
+isAntEnemy (AntTile (Enemy _)) = True
+isAntEnemy _ = False
+
+isHillEnemy (HillTile (Enemy _)) = True
+isHillEnemy _ = False
+
+isDeadEnemy (Dead (Enemy _)) = True
+isDeadEnemy _ = False
+
+-- | For debugging
+renderTile :: MetaTile -> String
+renderTile m
+  | tile m == AntTile Me = visibleUpper m 'm'
+  | isAntEnemy $ tile m = visibleUpper m 'e'
+  | tile m == Dead Me = visibleUpper m 'd'
+  | isDeadEnemy $ tile m = visibleUpper m 'd'
+  | tile m == Land = visibleUpper m 'l'
+  | tile m == HillTile Me = visibleUpper m 'h'
+  | isHillEnemy $ tile m = visibleUpper m 'x'
+  | tile m == FoodTile = visibleUpper m 'f'
+  | tile m == Water = visibleUpper m 'w'
+  | otherwise = "*"
+  where
+    visibleUpper :: MetaTile -> Char -> String
+    visibleUpper mt c
+      | visible mt = [toUpper c]
+      | otherwise  = [c]
+
+-- | Sets the tile to visible, if the tile is still unknown then it is land.
+visibleMetaTile :: MetaTile -> MetaTile
+visibleMetaTile m
+  | tile m == Unknown = MetaTile {tile = Land, visible = True}
+  | otherwise         = MetaTile {tile = tile m, visible = True}
+
+-- | Resets tile to land if it is currently occupied by food or ant
+--   and makes the tile invisible.
+clearMetaTile :: MetaTile -> MetaTile
+clearMetaTile m
+  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = False}
+  | otherwise = MetaTile {tile = tile m, visible = False}
+
+--------------------------------------------------------------------------------
+-- Immutable World -------------------------------------------------------------
+--------------------------------------------------------------------------------
+type World = Array Point MetaTile
+
+colBound :: World -> Col
+colBound = col.snd.bounds
+
+rowBound :: World -> Row
+rowBound = row.snd.bounds
+
+-- | Accesses World using the modulus of the point
+(%!) :: World -> Point -> MetaTile
+(%!) w p = w ! (w %!% p)
+
+-- | Takes the modulus of the point
+(%!%) :: World -> Point -> Point
+(%!%) w p =
+  let modCol = 1 + colBound w
+      modRow = 1 + rowBound w
+      ixCol  = col p `mod` modCol
+      ixRow  = row p `mod` modRow
+  in (ixRow, ixCol)
+
+-- | For debugging
+renderWorld :: World -> String
+renderWorld w = concatMap renderAssoc (assocs w)
+  where
+    maxCol = colBound w
+    renderAssoc :: (Point, MetaTile) -> String
+    renderAssoc a
+      | col (fst a) == maxCol = renderTile (snd a) ++ "\n"
+      | otherwise = renderTile (snd a)
+
+--------------------------------------------------------------------------------
+-- Norms and Metrics -----------------------------------------------------------
+-- https://secure.wikimedia.org/wikipedia/en/wiki/Norm_(mathematics) -----------
+--------------------------------------------------------------------------------
+modDistance :: Int -- modulus
+            -> Int -> Int -> Int
+modDistance m x y = 
+  let a = abs $ x - y
+  in min a (m - a)
+
+-- | Computes manhattan distance.
+manhattan :: Point -- modulus point
+          -> Point -> Point -> Int
+manhattan mp p1 p2 =
+  let rowd = modDistance (row mp) (row p1) (row p2)
+      cold = modDistance (col mp) (col p1) (col p2)
+  in rowd + cold
+
+-- | Computes the square of the two norm.
+twoNormSquared :: Point -> Int
+twoNormSquared p = row p ^ (2::Int) + col p ^ (2::Int)
+
+distance :: GameParams -> Point -> Point -> Int
+distance gp p1 p2 =
+  let mp = (rows gp, cols gp)
+  in manhattan mp p1 p2
+
+sumPoint :: Point -> Point -> Point
+sumPoint x y = (row x + row y, col x + col y)
+
+incPoint :: Point -> Point
+incPoint = sumPoint (1,1)
+
+modPoint :: Point -- modulus point
+         -> Point -> Point
+modPoint mp p = (row p `mod` row mp, col p `mod` col mp)
+
+getPointCircle :: Int -- radius squared
+               -> [Point]
+getPointCircle r2 =
+  let rx = truncate.sqrt.(fromIntegral::Int -> Double) $ r2
+  in filter ((<=r2).twoNormSquared) $ (,) <$> [-rx..rx] <*> [-rx..rx]
+
+--------------------------------------------------------------------------------
+-- Ants ------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+data Owner = Me | Enemy Int deriving (Show,Eq)
 
 data Ant = Ant
-  { point :: Point
-  , owner :: Owner
+  { pointAnt :: Point
+  , ownerAnt :: Owner
   } deriving (Show)
 
+isMe, isEnemy :: Ant -> Bool
+isMe = (==Me).ownerAnt
+isEnemy = not.isMe
+
+myAnts, enemyAnts :: [Ant] -> [Ant]
+myAnts = filter isMe
+enemyAnts = filter isEnemy
+
+--------------------------------------------------------------------------------
+-- Hills -----------------------------------------------------------------------
+--------------------------------------------------------------------------------
+data Hill = Hill
+  { pointHill :: Point
+  , ownerHill :: Owner
+  } deriving (Show)
+
+isMy, isEnemy's :: Hill -> Bool
+isMy = (==Me).ownerHill
+isEnemy's = not.isMy
+
+myHills, enemyHills :: [Hill] -> [Hill]
+myHills = filter isMy
+enemyHills = filter isEnemy's
+
+--------------------------------------------------------------------------------
+-- Orders ----------------------------------------------------------------------
+--------------------------------------------------------------------------------
 data Direction = North | East | South | West deriving (Bounded, Eq, Enum)
 
 instance Show Direction where
@@ -95,104 +243,10 @@ instance Show Direction where
   show South = "S"
   show West  = "W"
 
--- Representation of an order
 data Order = Order
   { ant :: Ant
   , direction :: Direction
   } deriving (Show)
-
-data GameState = GameState
-  { world :: World
-  , ants :: [Ant]
-  , food :: [Food] -- call "food GameState" to return food list
-  , startTime :: UTCTime
-  }
-
-data GameParams = GameParams
-  { loadtime :: Int
-  , turntime :: Int
-  , rows :: Int
-  , cols :: Int
-  , turns :: Int
-  , viewradius2 :: Int
-  , attackradius2 :: Int
-  , spawnradius2 :: Int
-  , viewPoints :: [Point]
-  } deriving (Show)
-
---------------- Tile functions -------------------
-isAnt :: Tile -> Bool
-isAnt t = any (==t) [MyTile .. Enemy3Tile]
-
-renderTile :: MetaTile -> String
-renderTile m 
-  | tile m == MyTile = visibleUpper m 'm'
-  | tile m == Enemy1Tile = visibleUpper m 'a'
-  | tile m == Enemy2Tile = visibleUpper m 'b'
-  | tile m == Enemy3Tile = visibleUpper m 'c'
-  | tile m == Dead = visibleUpper m 'd'
-  | tile m == Land = visibleUpper m 'l'
-  | tile m == FoodTile = visibleUpper m 'f'
-  | tile m == Water = visibleUpper m 'w'
-  | otherwise = "*"
-  where 
-    visibleUpper :: MetaTile -> Char -> String
-    visibleUpper mt c =
-      case visible mt of
-        Observed -> [toUpper c]
-        otherwise -> [c]
-      
-renderWorld :: World -> String
-renderWorld w = concatMap renderAssoc (assocs w)
-  where
-    maxCol = colBound w
-    renderAssoc :: (Point, MetaTile) -> String
-    renderAssoc a 
-      | col (fst a) == maxCol = renderTile (snd a) ++ "\n"
-      | otherwise = renderTile (snd a)
-
-modDistance :: Int -> Int -> Int -> Int
-modDistance n x y = min ((x - y) `mod` n) ((y - x) `mod` n)
-
-manhattan :: Point -- bound
-          -> Point -> Point -> Int
-manhattan bound p1 p2 = 
-  let rowd = modDistance (row bound + 1) (row p1) (row p2)
-      cold = modDistance (col bound + 1) (col p1) (col p2)
-  in rowd + cold
-
-oneNorm :: Point -> Int
-oneNorm p = row p + col p
-
-twoNormSquared :: Point -> Int
-twoNormSquared p = row p ^ 2 + col p ^ 2
-
-euclidSquare :: Point  -- bound
-             -> Point -> Point -> Int
-euclidSquare bound p1 p2 = 
-  let rowd = modDistance (row bound + 1) (row p1) (row p2)
-      cold = modDistance (col bound + 1) (col p1) (col p2)
-  in (rowd ^ 2) + (cold ^ 2)
-
-distance :: GameParams -> Point -> Point -> Int
-distance gp l1 l2 =
-  let maxRow = rows gp - 1
-      maxCol = cols gp - 1
-      rowDist = modDistance maxRow (row l1) (row l2)
-      colDist = modDistance maxCol (col l1) (col l2)
-  in rowDist + colDist
-
-isMe :: Ant -> Bool
-isMe a = owner a == Me
-
-myAnts :: [Ant] -> [Ant]
-myAnts = filter isMe
-
-isEnemy :: Ant -> Bool
-isEnemy = not . isMe
-
-enemyAnts :: [Ant] -> [Ant]
-enemyAnts = filter isEnemy
 
 move :: Direction -> Point -> Point
 move dir p
@@ -203,216 +257,175 @@ move dir p
 
 passable :: World -> Order -> Bool
 passable w order =
-  let newPoint = move (direction order) (point $ ant order)
+  let newPoint = move (direction order) (pointAnt $ ant order)
   in  tile (w %! newPoint) /= Water
 
 issueOrder :: Order -> IO ()
 issueOrder order = do
-  let srow = (show . row . point . ant) order
-      scol = (show . col . point . ant) order
+  let srow = (show . row . pointAnt . ant) order
+      scol = (show . col . pointAnt . ant) order
       sdir = (show . direction) order
   putStrLn $ "o " ++ srow ++ " " ++ scol ++ " " ++ sdir
 
-finishTurn :: IO ()
-finishTurn = do
-  putStrLn "go"
-  hFlush stdout
-
-tuplify2 :: [a] -> (a,a)
-tuplify2 [x,y] = (x,y)
-
-ownerToTile :: Owner -> Tile
-ownerToTile Me = MyTile
-ownerToTile Enemy1 = Enemy1Tile
-ownerToTile Enemy2 = Enemy2Tile
-ownerToTile Enemy3 = Enemy2Tile
-
 toOwner :: Int -> Owner
 toOwner 0 = Me
-toOwner 1 = Enemy1
-toOwner 2 = Enemy2
-toOwner _ = Enemy3
+toOwner a = Enemy a
 
-addFood :: GameState -> Point -> GameState
-addFood gs loc = 
-  let newFood = loc:food gs
-      newWorld = world gs // [(loc, MetaTile {tile = FoodTile, visible = Observed})]
-  in GameState {world = newWorld, ants = ants gs, food = newFood, startTime = startTime gs}
+--------------------------------------------------------------------------------
+-- Updating Game ---------------------------------------------------------------
+--------------------------------------------------------------------------------
+type MWorld s = STArray s Point MetaTile
+type Food = Point
 
-sumPoint :: Point -> Point -> Point
-sumPoint x y = (row x + row y, col x + col y)
+data GameState = GameState
+  { world :: World
+  , ants :: [Ant] -- call "ants GameState" to all ants
+  , food :: [Food] -- call "food GameState" to all food
+  , hills :: [Hill] -- call "hills GameState" to all hills
+  , startTime :: UTCTime
+  }
 
-addVisible :: World 
+data GameParams = GameParams
+  { loadtime :: Int
+  , turntime :: Int
+  , rows :: Int
+  , cols :: Int
+  , turns :: Int
+  , playerSeed :: Int
+  , viewradius2 :: Int
+  , attackradius2 :: Int
+  , spawnradius2 :: Int
+  , viewCircle :: [Point]
+  , attackCircle :: [Point]
+  , spawnCircle :: [Point]
+  } deriving (Show)
+
+setVisible :: MWorld s -> Point -> ST s ()
+setVisible mw p = do
+  bnds <- getBounds mw
+  let np = modPoint (incPoint $ snd bnds) p
+  modifyWorld mw visibleMetaTile np
+
+addVisible :: World
            -> [Point] -- viewPoints
-           -> Point -- location
+           -> Point -- center point
            -> World
 addVisible w vp p = 
-  let vis = map (sumPoint p) vp
-      vtuple :: Point -> (Point, MetaTile)
-      vtuple pt = (w %!% pt, visibleMetaTile $ w %! pt)
-  in w // map vtuple vis
+  runSTArray $ do 
+    w' <- unsafeThaw w
+    mapM_ (setVisible w' . sumPoint p) vp
+    return w'
 
-addAnt :: GameParams -> GameState -> Point -> Owner -> GameState
-addAnt gp gs p own = 
-  let newAnts   = Ant {point = p, owner = own}:ants gs
-      newWorld' = if own == Me
-                    then addVisible (world gs) (viewPoints gp) p
-                    else world gs
-      newWorld  = newWorld' // [(p, MetaTile {tile = ownerToTile own, visible = Observed})]
-  in GameState {world = newWorld, ants = newAnts, food = food gs, startTime = startTime gs}
-
-addDead :: GameParams -> GameState -> Point -> Owner -> GameState
-addDead gp gs p own =
-  let newWorld' = if own == Me 
-                    then addVisible (world gs) (viewPoints gp) p
-                    else world gs
-      newWorld = newWorld' // [(p, MetaTile {tile = Dead, visible = Observed})]
-  in GameState {world = newWorld, ants = ants gs, food = food gs, startTime = startTime gs}
-
--- if replacing a visible tile it should be kept visible
-addWorldTile :: GameState -> Tile -> Point -> GameState
-addWorldTile gs t p =
-  let newWorld = world gs // [(p, MetaTile {tile = t, visible = Observed})]
-  in GameState {world = newWorld, ants = ants gs, food = food gs, startTime = startTime gs}
-
-initialGameState :: GameParams -> UTCTime -> GameState
-initialGameState gp time =
-  let w = listArray ((0,0), (rows gp - 1, cols gp - 1)) (repeat MetaTile {tile = Unknown, visible = Unobserved})
-  in GameState {world = w, ants = [], food = [], startTime = time}
-
-updateGameState :: GameParams -> GameState -> String -> GameState
-updateGameState gp gs s
-  | "f" `isPrefixOf` s = addFood gs $ toPoint . tail $ s
-  | "w" `isPrefixOf` s = addWorldTile gs Water $ toPoint . tail $ s
-  | "a" `isPrefixOf` s = addAnt gp gs (toPoint . init . tail $ s) (toOwner . digitToInt . last $ s)
-  | "d" `isPrefixOf` s = addDead gp gs (toPoint . init . tail $ s) (toOwner . digitToInt . last $ s)
+updateGameState :: [Point] -> GameState -> String -> GameState
+updateGameState vp gs s
+  | "f" `isPrefixOf` s = -- add food
+      let p = toPoint.tail $ s
+          fs' = p:food gs
+          nw = writeTile (world gs) p FoodTile
+      in GameState nw (ants gs) fs' (hills gs) (startTime gs)
+  | "w" `isPrefixOf` s = -- add water
+      let p = toPoint.tail $ s
+          nw = writeTile (world gs) p Water
+      in GameState nw (ants gs) (food gs) (hills gs) (startTime gs)
+  | "h" `isPrefixOf` s = -- add hill
+      let p = toPoint.init.tail $ s
+          own = toOwner.digitToInt.last $ s
+          hs = Hill { pointHill = p, ownerHill = own}:hills gs
+          nw = writeTile (world gs) p $ HillTile own
+      in GameState nw (ants gs) (food gs) hs (startTime gs)
+  | "a" `isPrefixOf` s = -- add ant
+      let own = toOwner.digitToInt.last $ s
+          p = toPoint.init.tail $ s
+          as' = Ant { pointAnt = p, ownerAnt = own}:ants gs
+          nw = writeTile (world gs) p $ AntTile own
+          nw' = if own == Me then addVisible nw vp p else nw
+      in GameState nw' as' (food gs) (hills gs) (startTime gs)
+  | "d" `isPrefixOf` s = -- add dead ant
+      let own = toOwner.digitToInt.last $ s
+          p = toPoint.init.tail $ s
+          nw = writeTile (world gs) p $ Dead own
+      in GameState nw (ants gs) (food gs) (hills gs) (startTime gs)
   | otherwise = gs -- ignore line
   where
     toPoint :: String -> Point
-    toPoint = tuplify2 . map read . words
+    toPoint = tuplify2.map read.words
+    writeTile w p t = runSTArray $ do
+      w' <- unsafeThaw w
+      writeArray w' p MetaTile {tile = t, visible = True}
+      return w'
 
-updateGame :: GameParams -> GameState -> IO GameState
-updateGame gp gs = do
-  line <- getLine
-  process line
-  where 
-    process line
-      | "turn" `isPrefixOf` line = do
-          hPutStrLn stderr line
-          updateGame gp gs 
-      | "go" `isPrefixOf` line   = do
-          currentTime <- getCurrentTime
-          return GameState {world = world gs
-                           , ants = ants gs
-                           , food = food gs
-                           , startTime = currentTime
-                           }
-      | otherwise = updateGame gp $ updateGameState gp gs line
+initialWorld :: GameParams -> World
+initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = False}
 
--- Sets the tile to visible
--- If the tile is still Unknown then it is land
-visibleMetaTile :: MetaTile -> MetaTile
-visibleMetaTile m 
-  | tile m == Unknown = MetaTile {tile = Land, visible = Observed}
-  | otherwise         = MetaTile {tile = tile m, visible = Observed}
-
-fAnd :: a -> [a -> Bool] -> Bool
-fAnd x = all ($x)
-
-fOr :: a -> [a -> Bool] -> Bool
-fOr x = any ($x)
-
--- Resets Tile to Land if it is currently occupied by food or ant
--- and makes the tile invisible
-clearMetaTile :: MetaTile -> MetaTile
-clearMetaTile m 
-  | fOr (tile m) [isAnt, (==FoodTile), (==Dead)] = MetaTile {tile = Land, visible = Unobserved}
-  | otherwise = MetaTile {tile = tile m, visible = Unobserved}
-
--- Clears ants and food and sets tiles to invisible
-cleanState :: GameState -> GameState
-cleanState gs = 
-  GameState {world = nw, ants = [], food = [], startTime = startTime gs}
-  where 
-    w = world gs
-    invisibles = map clearMetaTile $ elems w
-    nw = listArray (bounds w) invisibles
-
-timeRemaining :: GameState -> IO NominalDiffTime
-timeRemaining gs = do
-  timeNow <- getCurrentTime
-  return $ timeNow `diffUTCTime` startTime gs
-
-gatherParamInput :: IO [String]
-gatherParamInput = gatherInput' []
-  where
-    gatherInput' :: [String] -> IO [String]
-    gatherInput' xs = do
-      line <- getLine
-      if "ready" /= line
-        then gatherInput' (line:xs)
-        else return xs
-  
 createParams :: [(String, String)] -> GameParams
 createParams s =
   let lookup' key = read $ fromJust $ lookup key s
-      lt  = lookup' "loadtime"
-      tt  = lookup' "turntime"
-      rs  = lookup' "rows"
-      cs  = lookup' "cols"
-      ts  = lookup' "turns"
       vr2 = lookup' "viewradius2"
       ar2 = lookup' "attackradius2"
       sr2 = lookup' "spawnradius2"
-      mx  = truncate $ sqrt $ fromIntegral vr2
-      vp' = (,) <$> [-mx..mx] <*> [-mx..mx]
-      vp  = filter (\p -> twoNormSquared p <= vr2) vp'
-  in GameParams { loadtime      = lt
-                , turntime      = tt
-                , rows          = rs
-                , cols          = cs
-                , turns         = ts
+      vp = getPointCircle vr2
+      ap = getPointCircle ar2
+      sp = getPointCircle sr2
+  in GameParams { loadtime      = lookup' "loadtime"
+                , turntime      = lookup' "turntime"
+                , rows          = lookup' "rows"
+                , cols          = lookup' "cols"
+                , turns         = lookup' "turns"
+                , playerSeed    = lookup' "player_seed"
                 , viewradius2   = vr2
                 , attackradius2 = ar2
                 , spawnradius2  = sr2
-                , viewPoints    = vp
+                , viewCircle    = vp
+                , attackCircle  = ap
+                , spawnCircle   = sp
                 }
 
-endGame :: IO ()
-endGame = do
-  players <- getLine
-  hPutStrLn stderr $ "Number of players: " ++ (words players !! 1)
-  scores <- getLine
-  hPutStrLn stderr $ "Final scores: " ++ unwords (tail $ words scores)
-  -- TODO print 
+modifyWorld :: MWorld s -> (MetaTile -> MetaTile) -> Point -> ST s ()
+modifyWorld mw f p = do
+  e' <- readArray mw p
+  e' `seq` writeArray mw p (f e') -- !IMPORTANT! seq is necessary to avoid space leaks
 
-gameLoop :: GameParams -> GameState
-         -> (GameParams -> GameState -> IO [Order])
+mapWorld :: (MetaTile -> MetaTile) -> World -> World
+mapWorld f w = runSTArray $ do
+  mw <- unsafeThaw w
+  mapM_ (modifyWorld mw f) (indices w)
+  return mw
+
+gameLoop :: GameParams 
+         -> (GameState -> IO [Order])
+         -> World
+         -> [String] -- input
          -> IO ()
-gameLoop gp gs doTurn = do
-  line <- getLine
-  gameLoop' line
-  where
-    gameLoop' line
-      | "turn" `isPrefixOf` line = do 
-          hPutStrLn stderr line
-          let gsc = cleanState gs
-          gsu <- updateGame gp gsc
-          orders <- doTurn gp gsu
-          hPutStrLn stderr $ show orders
-          mapM_ issueOrder orders
-          finishTurn
-          gameLoop gp gsu doTurn
-      | "end" `isPrefixOf` line = endGame
-      | otherwise = gameLoop gp gs doTurn -- ignore line
+gameLoop gp doTurn w (line:input)
+  | "turn" `isPrefixOf` line = do
+      hPutStrLn stderr line
+      time <- getCurrentTime
+      let cs = break (isPrefixOf "go") input
+          gs = foldl' (updateGameState $ viewCircle gp) (GameState w [] [] [] time) (fst cs)
+      orders <- doTurn gs
+      mapM_ issueOrder orders
+      finishTurn
+      gameLoop gp doTurn (mapWorld clearMetaTile $ world gs) (tail $ snd cs) -- clear world for next turn
+  | "end" `isPrefixOf` line = endGame input
+  | otherwise = gameLoop gp doTurn w input
+gameLoop _ _ _ [] = endGame []
 
 game :: (GameParams -> GameState -> IO [Order]) -> IO ()
 game doTurn = do
-  paramInput <- gatherParamInput
-  let gp = createParams $ map (tuplify2 . words) paramInput
-  currentTime <- getCurrentTime
-  let gs = initialGameState gp currentTime
-  finishTurn -- signal done with setup
-  gameLoop gp gs doTurn
+  content <- getContents
+  let cs = break (isPrefixOf "ready") $ lines content
+      gp = createParams $ map (tuplify2.words) (fst cs)
+  finishTurn
+  gameLoop gp (doTurn gp) (initialWorld gp) (tail $ snd cs)
 
--- vim: set expandtab:
+-- TODO this could be better
+endGame :: [String] -> IO ()
+endGame input = do
+  hPutStrLn stderr "end of game"
+  mapM_ (hPutStrLn stderr) input
+
+-- | Tell engine that we have finished the turn or setting up.
+finishTurn :: IO ()
+finishTurn = do
+  putStrLn "go" 
+  hFlush stdout
