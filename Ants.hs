@@ -13,6 +13,8 @@ module Ants
   , Point
   , Row
   , Col
+  , (%!)
+  , (%!%)
 
     -- Utility functions
   , myAnts
@@ -32,7 +34,7 @@ import Data.Array
 import Data.Array.ST
 import Data.List (isPrefixOf, foldl')
 import Data.Char (digitToInt, toUpper)
-import Data.Maybe (fromJust)
+import Data.Maybe
 
 import Data.Time.Clock
 import System.IO
@@ -75,10 +77,13 @@ data Visibility =
   | Unobserved
   deriving (Show, Eq)
 
+type Adjacency = Int
+
 -- | Elements of the world
 data MetaTile = MetaTile
   { tile :: Tile
   , visible :: Visibility
+  , adjacency :: Maybe Adjacency
   } deriving (Show)
 
 isAnt, isDead, isAntEnemy, isDeadEnemy :: Tile -> Bool
@@ -123,15 +128,15 @@ renderTile m
 -- | Sets the tile to visible, if the tile is still unknown then it is land.
 visibleMetaTile :: MetaTile -> MetaTile
 visibleMetaTile m
-  | tile m == Unknown = MetaTile {tile = Land, visible = Observed}
-  | otherwise         = MetaTile {tile = tile m, visible = Observed}
+  | tile m == Unknown = MetaTile {tile = Land, visible = Observed, adjacency = Nothing}
+  | otherwise         = MetaTile {tile = tile m, visible = Observed, adjacency = Nothing}
 
 -- | Resets tile to land if it is currently occupied by food or ant
 --   and makes the tile invisible.
 clearMetaTile :: MetaTile -> MetaTile
 clearMetaTile m
-  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = Unobserved}
-  | otherwise = MetaTile {tile = tile m, visible = Unobserved}
+  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = Unobserved, adjacency = Nothing}
+  | otherwise = MetaTile {tile = tile m, visible = Unobserved, adjacency = Nothing}
 
 --------------------------------------------------------------------------------
 -- Immutable World -------------------------------------------------------------
@@ -363,11 +368,11 @@ updateGameState vp gs s
     toPoint = tuplify2.map read.words
     writeTile w p t = runSTArray $ do
       w' <- unsafeThaw w
-      writeArray w' p MetaTile {tile = t, visible = Observed }
+      writeArray w' p MetaTile {tile = t, visible = Observed, adjacency = Nothing }
       return w'
 
 initialWorld :: GameParams -> World
-initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = Unobserved}
+initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = Unobserved, adjacency = Nothing}
 
 createParams :: [(String, String)] -> GameParams
 createParams s =
