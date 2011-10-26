@@ -1,0 +1,9 @@
+This tools package was published on Mon Oct 24 07:46:56 UTC 2011.
+
+Last change in the ants/ folder was:
+commit 1db33f66800f8e137adf9e5ef9e5da2b2e5f3490
+Date:   Mon Oct 24 03:46:11 2011 -0400
+
+    Don't use the highlight color for a regular player
+
+Check https://github.com/aichallenge/aichallenge/ants/ for new versions.
