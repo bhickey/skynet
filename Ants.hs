@@ -34,10 +34,10 @@ import System.IO
 -- type synonyms
 type Row = Int
 type Col = Int
-type Visible = Bool
 type Point = (Row, Col)
 type Food = Point
 type World = Array Point MetaTile
+data Visible = Observed | Unobserved | Predicted deriving (Show)
 
 colBound :: World -> Col
 colBound = col . snd . bounds
@@ -137,9 +137,10 @@ renderTile m
   | otherwise = "*"
   where 
     visibleUpper :: MetaTile -> Char -> String
-    visibleUpper mt c
-      | visible mt = [toUpper c]
-      | otherwise  = [c]
+    visibleUpper mt c =
+      case visible mt of
+        Observed -> [toUpper c]
+        otherwise -> [c]
       
 renderWorld :: World -> String
 renderWorld w = concatMap renderAssoc (assocs w)
@@ -235,7 +236,7 @@ toOwner _ = Enemy3
 addFood :: GameState -> Point -> GameState
 addFood gs loc = 
   let newFood = loc:food gs
-      newWorld = world gs // [(loc, MetaTile {tile = FoodTile, visible = True})]
+      newWorld = world gs // [(loc, MetaTile {tile = FoodTile, visible = Observed})]
   in GameState {world = newWorld, ants = ants gs, food = newFood, startTime = startTime gs}
 
 sumPoint :: Point -> Point -> Point
@@ -257,7 +258,7 @@ addAnt gp gs p own =
       newWorld' = if own == Me
                     then addVisible (world gs) (viewPoints gp) p
                     else world gs
-      newWorld  = newWorld' // [(p, MetaTile {tile = ownerToTile own, visible = True})]
+      newWorld  = newWorld' // [(p, MetaTile {tile = ownerToTile own, visible = Observed})]
   in GameState {world = newWorld, ants = newAnts, food = food gs, startTime = startTime gs}
 
 addDead :: GameParams -> GameState -> Point -> Owner -> GameState
@@ -265,18 +266,18 @@ addDead gp gs p own =
   let newWorld' = if own == Me 
                     then addVisible (world gs) (viewPoints gp) p
                     else world gs
-      newWorld = newWorld' // [(p, MetaTile {tile = Dead, visible = True})]
+      newWorld = newWorld' // [(p, MetaTile {tile = Dead, visible = Observed})]
   in GameState {world = newWorld, ants = ants gs, food = food gs, startTime = startTime gs}
 
 -- if replacing a visible tile it should be kept visible
 addWorldTile :: GameState -> Tile -> Point -> GameState
 addWorldTile gs t p =
-  let newWorld = world gs // [(p, MetaTile {tile = t, visible = True})]
+  let newWorld = world gs // [(p, MetaTile {tile = t, visible = Observed})]
   in GameState {world = newWorld, ants = ants gs, food = food gs, startTime = startTime gs}
 
 initialGameState :: GameParams -> UTCTime -> GameState
 initialGameState gp time =
-  let w = listArray ((0,0), (rows gp - 1, cols gp - 1)) (repeat MetaTile {tile = Unknown, visible = False})
+  let w = listArray ((0,0), (rows gp - 1, cols gp - 1)) (repeat MetaTile {tile = Unknown, visible = Unobserved})
   in GameState {world = w, ants = [], food = [], startTime = time}
 
 updateGameState :: GameParams -> GameState -> String -> GameState
@@ -312,8 +313,8 @@ updateGame gp gs = do
 -- If the tile is still Unknown then it is land
 visibleMetaTile :: MetaTile -> MetaTile
 visibleMetaTile m 
-  | tile m == Unknown = MetaTile {tile = Land, visible = True}
-  | otherwise         = MetaTile {tile = tile m, visible = True}
+  | tile m == Unknown = MetaTile {tile = Land, visible = Observed}
+  | otherwise         = MetaTile {tile = tile m, visible = Observed}
 
 fAnd :: a -> [a -> Bool] -> Bool
 fAnd x = all ($x)
@@ -325,8 +326,8 @@ fOr x = any ($x)
 -- and makes the tile invisible
 clearMetaTile :: MetaTile -> MetaTile
 clearMetaTile m 
-  | fOr (tile m) [isAnt, (==FoodTile), (==Dead)] = MetaTile {tile = Land, visible = False}
-  | otherwise = MetaTile {tile = tile m, visible = False}
+  | fOr (tile m) [isAnt, (==FoodTile), (==Dead)] = MetaTile {tile = Land, visible = Unobserved}
+  | otherwise = MetaTile {tile = tile m, visible = Unobserved}
 
 -- Clears ants and food and sets tiles to invisible
 cleanState :: GameState -> GameState
