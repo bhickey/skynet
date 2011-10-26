@@ -9,6 +9,11 @@ module Ants
   , Order (..)
   , World
 
+    -- Coordinates
+  , Point
+  , Row
+  , Col
+
     -- Utility functions
   , myAnts
   , enemyAnts
