@@ -4,6 +4,7 @@ cabal-dev
 *.hi
 *.chi
 *.chs.h
+*.pyc
 .DS_Store
 # Thumbnails
 ._*
