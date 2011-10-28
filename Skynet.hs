@@ -2,11 +2,14 @@ module Main where
 
 import Data.List
 import Data.Maybe (mapMaybe)
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
 import System.IO
 import System.Random
 
 import Ants
 import Search
+import BotMonad
 
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
@@ -23,23 +26,25 @@ generateOrders s targets a =
 
 {- |
  - Implement this function to create orders.
- - It uses the IO Monad so algorithms can call timeRemaining.
+ - It uses an Monad with IO so algorithms can call timeRemaining.
  -
  - GameParams data holds values that are constant throughout the game
  - GameState holds data that changes between each turn
  - for each see Ants module for more information
  -}
-
-doTurn :: GameParams -> GameState -> IO [Order]
-doTurn gp gs = do
-  rc <- randomRIO (0, cols gp)
-  rr <- randomRIO (0, rows gp)
-  let targets = (rc,rr):(food gs)
-      searchFn = search gp (world gs)
-      orders = mapMaybe (generateOrders searchFn targets) $ myAnts $ ants gs in
-    hPutStrLn stderr (show orders) >>
-    return orders
+doTurn :: GameParams -> BotMonad [Order]
+doTurn gp = do
+  gs <- ask
+  -- generate orders for all ants belonging to me
+  let generatedOrders = map generateOrders $ myAnts $ ants gs
+  -- for each ant take the first "passable" order, if one exists
+      orders = mapMaybe (tryOrder (world gs)) generatedOrders
+  -- this shows how to check the remaining time
+  elapsedTime <- timeRemaining 
+  lift . hPutStrLn stderr . show  $ elapsedTime
+  -- wrap list of orders back into a monad
+  return orders
 
 -- | This runs the game
 main :: IO ()
-main = game doTurn
+main = (game doTurn)
