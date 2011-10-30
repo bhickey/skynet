@@ -1,5 +1,5 @@
 #!/bin/bash
-ghc --make MyBot
-cp MyBot tools/
+ghc --make Skynet
+cp Skynet tools/
 cd tools
-./test_bot.sh MyBot
+./test_bot.sh Skynet
