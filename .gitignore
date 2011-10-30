@@ -18,4 +18,6 @@ Session.vim
 !.gitignore
 *~
 .directory
-MyBot
+Skynet
+*.html
+*.stream

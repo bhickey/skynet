@@ -21,8 +21,14 @@ module Ants
   , enemyAnts
   , passable
   , distance
+  , directions
+  , neighbor
+  , neighbors
   , timeRemaining
 
+  , Hill
+  , enemyHills
+  , pointHill
     -- main function
   , game
   ) where
@@ -77,13 +83,10 @@ data Visibility =
   | Unobserved
   deriving (Show, Eq)
 
-type Adjacency = Int
-
 -- | Elements of the world
 data MetaTile = MetaTile
   { tile :: Tile
   , visible :: Visibility
-  , adjacency :: Maybe Adjacency
   } deriving (Show)
 
 isAnt, isDead, isAntEnemy, isDeadEnemy :: Tile -> Bool
@@ -128,15 +131,15 @@ renderTile m
 -- | Sets the tile to visible, if the tile is still unknown then it is land.
 visibleMetaTile :: MetaTile -> MetaTile
 visibleMetaTile m
-  | tile m == Unknown = MetaTile {tile = Land, visible = Observed, adjacency = Nothing}
-  | otherwise         = MetaTile {tile = tile m, visible = Observed, adjacency = Nothing}
+  | tile m == Unknown = MetaTile {tile = Land, visible = Observed }
+  | otherwise         = MetaTile {tile = tile m, visible = Observed }
 
 -- | Resets tile to land if it is currently occupied by food or ant
 --   and makes the tile invisible.
 clearMetaTile :: MetaTile -> MetaTile
 clearMetaTile m
-  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = Unobserved, adjacency = Nothing}
-  | otherwise = MetaTile {tile = tile m, visible = Unobserved, adjacency = Nothing}
+  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = Unobserved }
+  | otherwise = MetaTile {tile = tile m, visible = Unobserved }
 
 --------------------------------------------------------------------------------
 -- Immutable World -------------------------------------------------------------
@@ -199,6 +202,32 @@ distance gp p1 p2 =
   let mp = (rows gp, cols gp)
   in manhattan mp p1 p2
 
+inCycle :: Int -> Int -> Int
+inCycle c x =
+  if x < 0
+  then x + c `mod` c
+  else x `mod` c
+
+neighbor :: GameParams -> Point -> Direction -> Point
+neighbor gp (x,y) d =
+  let r = inCycle $ rows gp
+      c = inCycle $ cols gp in
+    case d of
+      North -> (x, r $ y + 1)
+      South -> (x, r $ y - 1)
+      East  -> (c $ x + 1, y)
+      West  -> (c $ x - 1, y)
+
+neighbors :: GameParams -> World -> Point -> [(Point, Maybe Point)]
+neighbors gp w p =
+    let n = neighbor gp p in
+      filter (\ (g,_) -> tile (w %! g) /= Water)
+        [(n East, Just p)
+        ,(n West, Just p)
+        ,(n South, Just p)
+        ,(n North, Just p)
+        ]
+
 sumPoint :: Point -> Point -> Point
 sumPoint x y = (row x + row y, col x + col y)
 
@@ -253,6 +282,8 @@ enemyHills = filter isEnemy's
 -- Orders ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 data Direction = North | East | South | West deriving (Bounded, Eq, Enum)
+
+directions = [North .. West]
 
 instance Show Direction where
   show North = "N"
@@ -368,11 +399,11 @@ updateGameState vp gs s
     toPoint = tuplify2.map read.words
     writeTile w p t = runSTArray $ do
       w' <- unsafeThaw w
-      writeArray w' p MetaTile {tile = t, visible = Observed, adjacency = Nothing }
+      writeArray w' p MetaTile {tile = t, visible = Observed }
       return w'
 
 initialWorld :: GameParams -> World
-initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = Unobserved, adjacency = Nothing}
+initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = Unobserved }
 
 createParams :: [(String, String)] -> GameParams
 createParams s =
