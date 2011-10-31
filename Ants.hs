@@ -23,6 +23,7 @@ module Ants
   , distance
   , directions
   , neighbor
+  , inCycle
   , neighbors
   , timeRemaining
 
@@ -205,7 +206,7 @@ distance gp p1 p2 =
 inCycle :: Int -> Int -> Int
 inCycle c x =
   if x < 0
-  then x + c `mod` c
+  then (x + c) `mod` c
   else x `mod` c
 
 neighbor :: GameParams -> Point -> Direction -> Point
