@@ -32,6 +32,7 @@ module Ants
   , enemyAnts
   , passable
   , distance
+  , neighbors
 
   ) where
 

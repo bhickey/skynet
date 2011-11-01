@@ -36,6 +36,9 @@ timeRemaining = do
   where
     timeTill start = getCurrentTime >>= return . (flip diffUTCTime start)
 
+
+
+
 row :: Point -> Row
 row = fst
 
@@ -63,8 +66,8 @@ type MWorld s = STArray s Point MetaTile
 --   and makes the tile invisible.
 clearMetaTile :: MetaTile -> MetaTile
 clearMetaTile m
-  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = Unobserved, adjacency = Nothing}
-  | otherwise = MetaTile {tile = tile m, visible = Unobserved, adjacency = Nothing}
+  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = Unobserved }
+  | otherwise = MetaTile {tile = tile m, visible = Unobserved }
 
 setVisible :: MWorld s -> Point -> ST s ()
 setVisible mw p = do
@@ -117,11 +120,11 @@ updateGameState vp gs s
     toPoint = tuplify2.map read.words
     writeTile w p t = runSTArray $ do
       w' <- unsafeThaw w
-      writeArray w' p MetaTile {tile = t, visible = Observed, adjacency = Nothing }
+      writeArray w' p MetaTile {tile = t, visible = Observed}
       return w'
 
 initialWorld :: GameParams -> World
-initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = Unobserved, adjacency = Nothing}
+initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = Unobserved}
 
 createParams :: [(String, String)] -> GameParams
 createParams s =

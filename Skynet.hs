@@ -4,6 +4,7 @@ import Data.List
 import Data.Maybe (mapMaybe)
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
+import Control.Monad.Random
 import System.IO
 import System.Random
 
@@ -32,18 +33,18 @@ generateOrders s targets a =
  - GameState holds data that changes between each turn
  - for each see Ants module for more information
  -}
+
 doTurn :: GameParams -> BotMonad [Order]
 doTurn gp = do
   gs <- ask
-  -- generate orders for all ants belonging to me
-  let generatedOrders = map generateOrders $ myAnts $ ants gs
-  -- for each ant take the first "passable" order, if one exists
-      orders = mapMaybe (tryOrder (world gs)) generatedOrders
-  -- this shows how to check the remaining time
-  elapsedTime <- timeRemaining 
-  lift . hPutStrLn stderr . show  $ elapsedTime
-  -- wrap list of orders back into a monad
-  return orders
+  rc <- getRandomR (0, cols gp)
+  rr <- getRandomR (0, rows gp)
+  let targets = (rc,rr):(food gs)
+      searchFn = search gp (world gs)
+      orders = mapMaybe (generateOrders searchFn targets) $ myAnts $ ants gs in
+    lift $ hPutStrLn stderr (show orders) >>
+    return orders
+
 
 -- | This runs the game
 main :: IO ()
