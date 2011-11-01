@@ -39,7 +39,10 @@ worldSize w =
 sqrtc :: Int -> Int
 sqrtc x = ceiling (sqrt (fromIntegral x))
 
+populateSubdivision :: World -> [Point] -> Subdivision
+populateSubdivision w pl = emptySubdivision w
+
 subdivide :: (MonadRandom m) => World -> (Point -> [Point]) -> m Subdivision
 subdivide w nfn = do
   points <- replicateM (sqrtc $ worldSize w) (randomPoint w)
-  return (emptySubdivision w)
+  return $ populateSubdivision w points
