@@ -4,6 +4,8 @@ import Ants
 
 import Data.Array
 import Data.Maybe
+import System.Random
+import Control.Monad
 import Control.Monad.Random.Class
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -23,5 +25,21 @@ data Sector = Sector
 
 emptySubdivision w = Subdivision M.empty (listArray (bounds w) (repeat Nothing))
 
-subdivide :: World -> r -> (World -> Point -> [Point]) -> Subdivision
-subdivide w rng nfn = emptySubdivision w
+randomPoint :: (MonadRandom m) => World -> m Point
+randomPoint w = do
+  let ((r0,c0),(r1,c1)) = bounds w in
+    do row <- getRandomR (r0, r1)
+       col <- getRandomR (c0, c1)
+       return (row, col)
+            
+worldSize w =
+  let ((r0,c0),(r1,c1)) = bounds w in
+    (r1 - r0) * (c1 - c0)
+
+sqrtc :: Int -> Int
+sqrtc x = ceiling (sqrt (fromIntegral x))
+
+subdivide :: (MonadRandom m) => World -> (Point -> [Point]) -> m Subdivision
+subdivide w nfn = do
+  points <- replicateM (sqrtc $ worldSize w) (randomPoint w)
+  return (emptySubdivision w)
