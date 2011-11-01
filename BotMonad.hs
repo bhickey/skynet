@@ -3,6 +3,7 @@ module BotMonad where
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
+import Control.Monad.Random
 import Ants
 import Data.Time
 import Control.Applicative
@@ -16,6 +17,7 @@ import Data.Maybe
 
 import Data.Time.Clock
 import System.IO
+import System.Random
 
 import Util
 import Point
@@ -28,12 +30,12 @@ instance Monad BotMonadBase where
   x >>= f = BotMonadBase$ unBotMonadBase x >>= (unBotMonadBase. f)
 -}
 
-type BotMonad a = ReaderT GameState IO a
+type BotMonad a = ReaderT GameState (RandT StdGen IO) a
 
   
 timeRemaining :: BotMonad NominalDiffTime
 timeRemaining = do
-  ask >>= lift.timeTill.startTime
+  ask >>= lift.lift.timeTill.startTime
   where
     timeTill start = getCurrentTime >>= return . (flip diffUTCTime start)
 
@@ -161,8 +163,9 @@ gameLoop gp doTurn w (line:input)
       hPutStrLn stderr line
       time <- getCurrentTime
       let cs = break (isPrefixOf "go") input
-          gs = foldl' (updateGameState gp $ viewCircle gp) (GameState w [] [] [] time) (fst cs)
-      orders <- runReaderT doTurn gs
+          gs = foldl' (updateGameState $ viewCircle gp) (GameState w [] [] [] time) (fst cs)
+      gen <- newStdGen
+      orders <- evalRandT (runReaderT doTurn gs) gen
       mapM_ issueOrder orders
       finishTurn
       gameLoop gp doTurn (mapWorld clearMetaTile $ world gs) (tail $ snd cs) -- clear world for next turn

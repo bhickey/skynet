@@ -3,6 +3,7 @@ module Main where
 import Data.List
 import Data.Maybe (mapMaybe)
 import Control.Monad.Trans.Class
+import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Random
 import System.IO
@@ -33,8 +34,10 @@ doTurn gp = do
   gs <- ask
   rc <- getRandomR (0, cols gp)
   rr <- getRandomR (0, rows gp)
-  let orders = mapMaybe generateOrders $ myAnts $ ants gs in
-    lift $ hPutStrLn stderr (show orders) >>
+  let targets = (rc,rr):(food gs)
+      searchFn = search gp (world gs)
+      orders = mapMaybe (generateOrders searchFn targets) $ myAnts $ ants gs in
+    liftIO $ hPutStrLn stderr (show orders) >>
     return orders
 
 
