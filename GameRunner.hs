@@ -185,10 +185,10 @@ finishTurn = do
   hFlush stdout
 
 issueOrder :: Order -> IO ()
-issueOrder order = do
-  let srow = (show . row . pointAnt . ant) order
-      scol = (show . col . pointAnt . ant) order
-      sdir = (show . direction) order
+issueOrder (Order ant direction) = do
+  let srow = (show . row . pointAnt) ant
+      scol = (show . col . pointAnt) ant 
+      sdir = show direction
   putStrLn $ "o " ++ srow ++ " " ++ scol ++ " " ++ sdir
 
 

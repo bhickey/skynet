@@ -5,7 +5,7 @@ module Ants
   , Ant (..)
   , Direction (..)
   , GameState (..)
-  , Order (..)
+  , Order (Order)
   , World
   , ImputedWorld
   , Hill (..)
@@ -246,10 +246,7 @@ instance Show Direction where
   show South = "S"
   show West  = "W"
 
-data Order = Order
-  { ant :: Ant
-  , direction :: Direction
-  } deriving (Show)
+data Order = Order Ant Direction deriving (Show)
 
 move :: Direction -> Point -> Point
 move dir (Point r c mr mc)
@@ -259,8 +256,8 @@ move dir (Point r c mr mc)
   | dir == East  = Point r (c + 1) mr mc
 
 passable :: World -> Order -> Bool
-passable w order =
-  let newPoint = move (direction order) (pointAnt $ ant order)
+passable w (Order ant direction) =
+  let newPoint = move direction (pointAnt ant) 
   in  tile (w %! newPoint) /= Water
 
 toOwner :: Int -> Owner
