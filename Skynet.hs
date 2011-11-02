@@ -4,13 +4,14 @@ import Data.List
 import Data.Maybe (mapMaybe)
 import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Reader
+import Control.Monad.Reader.Class
 import Control.Monad.Random
 import System.IO
 import System.Random
 
 import Ants
 import BotMonad
+import GameRunner
 
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
@@ -37,7 +38,7 @@ doTurn gp = do
   let targets = (rc,rr):(food gs)
       searchFn = search gp (world gs)
       orders = mapMaybe (generateOrders searchFn targets) $ myAnts $ ants gs in
-    liftIO $ hPutStrLn stderr (show orders) >>
+    debugMessage orders >>
     return orders
 
 
