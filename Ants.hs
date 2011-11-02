@@ -23,6 +23,7 @@ module Ants
     -- Tile Functions
   , isAnt
   , isDead
+  , isWater
   , getPointCircle
   , visibleMetaTile
   , toOwner
@@ -210,6 +211,9 @@ neighbor gp (x,y) d =
       South -> (x, r $ y - 1)
       East  -> (c $ x + 1, y)
       West  -> (c $ x - 1, y)
+
+isWater :: World -> Point -> Bool
+isWater w p = tile (w %! p) == Water
 
 neighbors :: GameParams -> World -> Point -> [(Point, Maybe Point)]
 neighbors gp w p =

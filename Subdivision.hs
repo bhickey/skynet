@@ -19,6 +19,7 @@ data Subdivision = Subdivision
 
 data Sector = Sector
   { subId :: SectorId
+  , centroid :: Point
   , members :: S.Set Point
   , neighbors :: S.Set SectorId
   }
@@ -30,7 +31,9 @@ randomPoint w = do
   let ((r0,c0),(r1,c1)) = bounds w in
     do row <- getRandomR (r0, r1)
        col <- getRandomR (c0, c1)
-       return (row, col)
+       if isWater w (row, col)
+       then return (row, col)
+       else randomPoint w
             
 worldSize w =
   let ((r0,c0),(r1,c1)) = bounds w in
@@ -39,8 +42,15 @@ worldSize w =
 sqrtc :: Int -> Int
 sqrtc x = ceiling (sqrt (fromIntegral x))
 
+toSectors :: [Point] -> [Sector]
+toSectors pl =
+    zipWith (\ p id -> Sector id p (S.singleton p) S.empty) pl [0..]
+
+subdivideWith x y = y --do some BFS magic
+
 populateSubdivision :: World -> [Point] -> Subdivision
-populateSubdivision w pl = emptySubdivision w
+populateSubdivision w pl = 
+  subdivideWith (toSectors pl) (emptySubdivision w)
 
 subdivide :: (MonadRandom m) => World -> (Point -> [Point]) -> m Subdivision
 subdivide w nfn = do
