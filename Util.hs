@@ -4,6 +4,7 @@ module Util
   , tuplify2
   , dump
   , output
+  , if'
   ) where
 
 import System.IO
@@ -17,6 +18,7 @@ fOr x = any ($x)
 
 tuplify2 :: [a] -> (a,a)
 tuplify2 [x,y] = (x,y)
+tuplify2 _ = error "tuplify2"
 
 if' :: Bool -> a -> a -> a
 if' True x _ = x

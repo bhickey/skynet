@@ -1,24 +1,18 @@
 module GameRunner where
 
-import Control.Monad
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader
 import Control.Monad.Random
 import Ants
 import BotMonad
 import Data.Time
-import Control.Applicative
 import Control.Monad.ST
 
 import Data.Array
 import Data.Array.ST
 import Data.List (isPrefixOf, foldl')
-import Data.Char (digitToInt, toUpper)
+import Data.Char (digitToInt)
 import Data.Maybe
 
-import Data.Time.Clock
 import System.IO
-import System.Random
 
 import Util
 

@@ -34,20 +34,19 @@ module Ants
   , passable
   , distance
   , neighbors
+  
+    -- Debugging
+  , renderWorld
 
   ) where
 
 import Control.Applicative
-import Control.Monad.ST
 
 import Data.Array
-import Data.Array.ST
-import Data.List (isPrefixOf, foldl')
-import Data.Char (digitToInt, toUpper)
+import Data.Char (toUpper)
 import Data.Maybe
 
 import Data.Time.Clock
-import System.IO
 
 import Point
 import Util
@@ -76,16 +75,16 @@ data MetaTile = MetaTile
   , visible :: Visibility
   } deriving (Show)
 
-isAnt, isDead, isAntEnemy, isDeadEnemy :: Tile -> Bool
-isAnt (AntTile _) = True
-isAnt _ = False
-
-isDead (Dead _) = True
-isDead _ = False
+{-
+ Unused Tile functions
 
 isHill (HillTile _) = True
 isHill _ = False
 
+
+-}
+
+isAnt, isDead, isAntEnemy, isDeadEnemy, isHillEnemy :: Tile -> Bool
 isAntEnemy (AntTile (Enemy _)) = True
 isAntEnemy _ = False
 
@@ -94,6 +93,13 @@ isHillEnemy _ = False
 
 isDeadEnemy (Dead (Enemy _)) = True
 isDeadEnemy _ = False
+
+isAnt (AntTile _) = True
+isAnt _ = False
+
+isDead (Dead _) = True
+isDead _ = False
+
 
 -- | For debugging
 renderTile :: MetaTile -> String
@@ -220,6 +226,7 @@ data Hill = Hill
   , ownerHill :: Owner
   } deriving (Show)
 
+{-
 isMy, isEnemy's :: Hill -> Bool
 isMy = (==Me).ownerHill
 isEnemy's = not.isMy
@@ -227,11 +234,11 @@ isEnemy's = not.isMy
 myHills, enemyHills :: [Hill] -> [Hill]
 myHills = filter isMy
 enemyHills = filter isEnemy's
+-}
 
 --------------------------------------------------------------------------------
 -- Orders ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
-
 
 instance Show Direction where
   show North = "N"

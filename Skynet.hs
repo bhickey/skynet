@@ -2,12 +2,9 @@ module Main where
 
 import Data.List
 import Data.Maybe (mapMaybe)
-import Control.Monad.Trans.Class
-import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Control.Monad.Random
 import System.IO
-import System.Random
 
 import Ants
 import BotMonad
@@ -18,8 +15,13 @@ import GameRunner
 tryOrder :: World -> [Order] -> Maybe Order
 tryOrder w = find (passable w)
 
-generateOrders :: Ant -> Maybe Order
-generateOrders a = Nothing
+generateOrders :: PathFinder -> [Point] -> Ant -> Maybe Order
+generateOrders s targets t =
+  let ap = pointAnt t
+      pth = minimumBy (\ a b -> compare (len a) (len b)) $ map (s ap) targets in
+    if (length $ path pth) > 0
+    then Just $ Order t (head $ path pth)
+    else Nothing
 
 {- |
  - Implement this function to create orders.

@@ -4,7 +4,6 @@ import Prelude hiding (null)
 import Ants
 import qualified Data.IntMap as I
 import qualified Data.Map as M
-import Data.Maybe
 
 type Heuristic = (Point -> Int)
 
@@ -29,6 +28,7 @@ push sq p = Search
 pop :: Search -> (Point, Search)
 pop sq = 
   case I.findMin $ queue sq of
+    (_, []) -> error "Search queue is empty"
     (k, [h]) -> (h, Search { queue = I.delete k $ queue sq, heuristic = heuristic sq})
     (k, h:t) -> (h, Search { queue = I.insert k t $ queue sq, heuristic = heuristic sq})
 
@@ -67,6 +67,7 @@ step (x0,y0) (x1, y1) =
     dir  0 1  = North
     dir xd 0 = if xd > 0 then East else West
     dir 0 yd = if yd > 0 then South else North
+    dir _ _ = error "Squares are not next to each other"
 
 backtrace :: Point -> ClosedList -> [Direction]
 backtrace p cl = 

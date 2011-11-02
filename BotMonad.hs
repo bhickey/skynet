@@ -6,16 +6,14 @@ module BotMonad (
  debugMessage,
 ) where 
 
-import Control.Monad
-import Control.Monad.Trans.Class
-import Control.Monad.Random
-import Control.Monad.Trans.Reader (runReaderT, ReaderT)
-import Control.Monad.IO.Class
-import Control.Monad.Reader.Class
 import Ants
-import Data.Time
 import Control.Applicative
-import Control.Monad.ST
+import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Random
+import Control.Monad.Reader.Class
+import Control.Monad.Trans.Reader (runReaderT, ReaderT)
+import Control.Monad.Trans.Class
 
 import Data.Array
 import Data.Array.IArray
@@ -24,14 +22,12 @@ import Data.Char (digitToInt, toUpper)
 import Data.Maybe
 
 import Data.Time.Clock
-import System.IO
-import System.Random
-
-import Util
-import Point
+import Data.Time
 
 
-newtype BotMonad a = BotMonad { unBotMonad :: (ReaderT GameState (RandT StdGen IO) a) }
+
+
+newtype BotMonad a = BotMonad (ReaderT GameState (RandT StdGen IO) a)
   deriving (Monad, Functor, MonadRandom)
 
 instance MonadReader GameState BotMonad where
