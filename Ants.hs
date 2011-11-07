@@ -7,6 +7,7 @@ module Ants
   , GameState (..)
   , Order (..)
   , World
+  , ImputedWorld
   , Hill (..)
   , Tile (..)
   , MetaTile (..)
@@ -65,8 +66,8 @@ data Tile = AntTile Owner
 
 data Visibility = 
     Observed
-  | Predicted
   | Unobserved
+  | Predicted
   deriving (Show, Eq)
 
 -- | Elements of the world
@@ -125,6 +126,7 @@ visibleMetaTile m
 -- Immutable World -------------------------------------------------------------
 --------------------------------------------------------------------------------
 type World = Array Point MetaTile
+type ImputedWorld = Array Point Tile
 
 colBound :: World -> Col
 colBound = col.snd.bounds
@@ -176,14 +178,13 @@ inCycle c x =
 isWater :: World -> Point -> Bool
 isWater w p = tile (w ! p) == Water
 
-neighbors :: World -> Point -> [(Point, Maybe Point)]
+neighbors :: (Array Point e) -> Point -> [Point]
 neighbors w p =
     let n = neighbor p in
-      filter (\ (g,_) -> tile (w ! g) /= Water)
-        [(n East, Just p)
-        ,(n West, Just p)
-        ,(n South, Just p)
-        ,(n North, Just p)
+        [(n East)
+        ,(n West)
+        ,(n South)
+        ,(n North)
         ]
 
 

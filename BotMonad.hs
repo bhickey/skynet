@@ -9,7 +9,7 @@ import Control.Applicative
 import Control.Monad.ST
 
 import Data.Array
-import Data.Array.ST
+import Data.Array.IArray
 import Data.List (isPrefixOf, foldl')
 import Data.Char (digitToInt, toUpper)
 import Data.Maybe
