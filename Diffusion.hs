@@ -62,7 +62,7 @@ diffusionGrid w = amap tileToEnum w
 getRule :: DiffusionRules -> Automata -> Rule
 getRule dr auto = 
   case dr ! auto of
-    Nothing -> (\ _ _ _ -> 0.0)
+    Nothing -> (\ _ x _ -> x)
     Just (_, f) -> f
 
 mapRules :: DiffusionRules -> AutomataArray -> AutomataArray -> AutomataArray
