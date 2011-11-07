@@ -18,7 +18,6 @@ module Ants
   , Row
   , Col
   , (%!)
-  , (%!%)
 
     -- Tile Functions
   , isAnt
@@ -49,21 +48,8 @@ import Data.Maybe
 import Data.Time.Clock
 import System.IO
 
+import Point
 import Util
-
-
---------------------------------------------------------------------------------
--- Points ----------------------------------------------------------------------
---------------------------------------------------------------------------------
-type Row = Int
-type Col = Int
-type Point = (Row, Col)
-
-row :: Point -> Row
-row = fst
-
-col :: Point -> Col
-col = snd
 
 --------------------------------------------------------------------------------
 -- Tiles -----------------------------------------------------------------------
@@ -148,16 +134,7 @@ rowBound = row.snd.bounds
 
 -- | Accesses World using the modulus of the point
 (%!) :: World -> Point -> MetaTile
-(%!) w p = w ! (w %!% p)
-
--- | Takes the modulus of the point
-(%!%) :: World -> Point -> Point
-(%!%) w p =
-  let modCol = 1 + colBound w
-      modRow = 1 + rowBound w
-      ixCol  = col p `mod` modCol
-      ixRow  = row p `mod` modRow
-  in (ixRow, ixCol)
+(%!) w p = w ! p
 
 -- | For debugging
 renderWorld :: World -> String
@@ -180,21 +157,15 @@ modDistance m x y =
   in min a (m - a)
 
 -- | Computes manhattan distance.
-manhattan :: Point -- modulus point
-          -> Point -> Point -> Int
-manhattan mp p1 p2 =
-  let rowd = modDistance (row mp) (row p1) (row p2)
-      cold = modDistance (col mp) (col p1) (col p2)
+distance :: Point -> Point -> Int
+distance p1 p2 =
+  let rowd = modDistance (maxRow p1) (row p1) (row p2)
+      cold = modDistance (maxCol p1) (col p1) (col p2)
   in rowd + cold
 
 -- | Computes the square of the two norm.
-twoNormSquared :: Point -> Int
-twoNormSquared p = row p ^ (2::Int) + col p ^ (2::Int)
-
-distance :: GameParams -> Point -> Point -> Int
-distance gp p1 p2 =
-  let mp = (rows gp, cols gp)
-  in manhattan mp p1 p2
+twoNormSquared :: (Row, Col) -> Int
+twoNormSquared (r,c) = r ^ (2::Int) + c ^ (2::Int)
 
 inCycle :: Int -> Int -> Int
 inCycle c x =
@@ -202,23 +173,13 @@ inCycle c x =
   then (x + c) `mod` c
   else x `mod` c
 
-neighbor :: GameParams -> Point -> Direction -> Point
-neighbor gp (x,y) d =
-  let r = inCycle $ rows gp
-      c = inCycle $ cols gp in
-    case d of
-      North -> (x, r $ y + 1)
-      South -> (x, r $ y - 1)
-      East  -> (c $ x + 1, y)
-      West  -> (c $ x - 1, y)
-
 isWater :: World -> Point -> Bool
-isWater w p = tile (w %! p) == Water
+isWater w p = tile (w ! p) == Water
 
-neighbors :: GameParams -> World -> Point -> [(Point, Maybe Point)]
-neighbors gp w p =
-    let n = neighbor gp p in
-      filter (\ (g,_) -> tile (w %! g) /= Water)
+neighbors :: World -> Point -> [(Point, Maybe Point)]
+neighbors w p =
+    let n = neighbor p in
+      filter (\ (g,_) -> tile (w ! g) /= Water)
         [(n East, Just p)
         ,(n West, Just p)
         ,(n South, Just p)
@@ -226,12 +187,11 @@ neighbors gp w p =
         ]
 
 
-
 getPointCircle :: Int -- radius squared
-               -> [Point]
-getPointCircle r2 =
+               -> (Row, Col) -> [Point]
+getPointCircle r2 (mr,mc) =
   let rx = truncate.sqrt.(fromIntegral::Int -> Double) $ r2
-  in filter ((<=r2).twoNormSquared) $ (,) <$> [-rx..rx] <*> [-rx..rx]
+  in map (\ (r,c) -> Point r c mr mc) $ filter ((<=r2).twoNormSquared) $ (,) <$> [-rx..rx] <*> [-rx..rx]
 
 --------------------------------------------------------------------------------
 -- Ants ------------------------------------------------------------------------
@@ -270,9 +230,7 @@ enemyHills = filter isEnemy's
 --------------------------------------------------------------------------------
 -- Orders ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
-data Direction = North | East | South | West deriving (Bounded, Eq, Enum)
 
-directions = [North .. West]
 
 instance Show Direction where
   show North = "N"
@@ -286,17 +244,16 @@ data Order = Order
   } deriving (Show)
 
 move :: Direction -> Point -> Point
-move dir p
-  | dir == North = (row p - 1, col p)
-  | dir == South = (row p + 1, col p)
-  | dir == West  = (row p, col p - 1)
-  | otherwise    = (row p, col p + 1)
+move dir (Point r c mr mc)
+  | dir == North = Point (r - 1) c mr mc
+  | dir == South = Point (r + 1) c mr mc
+  | dir == West  = Point r (c - 1) mr mc
+  | dir == East  = Point r (c + 1) mr mc
 
 passable :: World -> Order -> Bool
 passable w order =
   let newPoint = move (direction order) (pointAnt $ ant order)
   in  tile (w %! newPoint) /= Water
-
 
 toOwner :: Int -> Owner
 toOwner 0 = Me

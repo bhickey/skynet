@@ -9,7 +9,6 @@ import System.IO
 import System.Random
 
 import Ants
-import Search
 import BotMonad
 
 -- | Picks the first "passable" order in a list
@@ -17,13 +16,8 @@ import BotMonad
 tryOrder :: World -> [Order] -> Maybe Order
 tryOrder w = find (passable w)
 
-generateOrders :: PathFinder -> [Point] -> Ant -> Maybe Order
-generateOrders s targets a =
-  let ap = pointAnt a
-      pth = minimumBy (\ a b -> compare (len a) (len b)) $ map (s ap) targets in
-    if (length $ path pth) > 0
-    then Just $ Order a (head $ path pth)
-    else Nothing
+generateOrders :: Ant -> Maybe Order
+generateOrders a = Nothing
 
 {- |
  - Implement this function to create orders.
@@ -39,9 +33,7 @@ doTurn gp = do
   gs <- ask
   rc <- getRandomR (0, cols gp)
   rr <- getRandomR (0, rows gp)
-  let targets = (rc,rr):(food gs)
-      searchFn = search gp (world gs)
-      orders = mapMaybe (generateOrders searchFn targets) $ myAnts $ ants gs in
+  let orders = mapMaybe generateOrders $ myAnts $ ants gs in
     lift $ hPutStrLn stderr (show orders) >>
     return orders
 

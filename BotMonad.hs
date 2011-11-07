@@ -18,6 +18,7 @@ import Data.Time.Clock
 import System.IO
 
 import Util
+import Point
 
 {-
 newtype BotMonadBase a = BotMonadBase { unBotMonadBase :: (IO a) }
@@ -36,31 +37,16 @@ timeRemaining = do
   where
     timeTill start = getCurrentTime >>= return . (flip diffUTCTime start)
 
-
-
-
-row :: Point -> Row
-row = fst
-
-col :: Point -> Col
-col = snd
-
 sumPoint :: Point -> Point -> Point
-sumPoint x y = (row x + row y, col x + col y)
+sumPoint x y = Point ((row x + row y) `mod` maxRow x) ((col x + col y) `mod` maxCol x) (maxRow x) (maxCol x)
 
 incPoint :: Point -> Point
-incPoint = sumPoint (1,1)
-
-modPoint :: Point -- modulus point
-         -> Point -> Point
-modPoint mp p = (row p `mod` row mp, col p `mod` col mp)
-
+incPoint = sumPoint (Point 1 1 0 0)
 
 --------------------------------------------------------------------------------
 -- Updating Game ---------------------------------------------------------------
 --------------------------------------------------------------------------------
 type MWorld s = STArray s Point MetaTile
-
 
 -- | Resets tile to land if it is currently occupied by food or ant
 --   and makes the tile invisible.
@@ -71,9 +57,7 @@ clearMetaTile m
 
 setVisible :: MWorld s -> Point -> ST s ()
 setVisible mw p = do
-  bnds <- getBounds mw
-  let np = modPoint (incPoint $ snd bnds) p
-  modifyWorld mw visibleMetaTile np
+  modifyWorld mw visibleMetaTile p
 
 addVisible :: World
            -> [Point] -- viewPoints
@@ -85,46 +69,49 @@ addVisible w vp p =
     mapM_ (setVisible w' . sumPoint p) vp
     return w'
 
-updateGameState :: [Point] -> GameState -> String -> GameState
-updateGameState vp gs s
+updateGameState :: GameParams -> [Point] -> GameState -> String -> GameState
+updateGameState gp vp gs s
   | "f" `isPrefixOf` s = -- add food
-      let p = toPoint.tail $ s
+      let p = (toPoint gp).tail $ s
           fs' = p:food gs
           nw = writeTile (world gs) p FoodTile
       in GameState nw (ants gs) fs' (hills gs) (startTime gs)
   | "w" `isPrefixOf` s = -- add water
-      let p = toPoint.tail $ s
+      let p = (toPoint gp).tail $ s
           nw = writeTile (world gs) p Water
       in GameState nw (ants gs) (food gs) (hills gs) (startTime gs)
   | "h" `isPrefixOf` s = -- add hill
-      let p = toPoint.init.tail $ s
+      let p = (toPoint gp).init.tail $ s
           own = toOwner.digitToInt.last $ s
           hs = Hill { pointHill = p, ownerHill = own}:hills gs
           nw = writeTile (world gs) p $ HillTile own
       in GameState nw (ants gs) (food gs) hs (startTime gs)
   | "a" `isPrefixOf` s = -- add ant
       let own = toOwner.digitToInt.last $ s
-          p = toPoint.init.tail $ s
+          p = (toPoint gp).init.tail $ s
           as' = Ant { pointAnt = p, ownerAnt = own}:ants gs
           nw = writeTile (world gs) p $ AntTile own
           nw' = if own == Me then addVisible nw vp p else nw
       in GameState nw' as' (food gs) (hills gs) (startTime gs)
   | "d" `isPrefixOf` s = -- add dead ant
       let own = toOwner.digitToInt.last $ s
-          p = toPoint.init.tail $ s
+          p = (toPoint gp).init.tail $ s
           nw = writeTile (world gs) p $ Dead own
       in GameState nw (ants gs) (food gs) (hills gs) (startTime gs)
   | otherwise = gs -- ignore line
   where
-    toPoint :: String -> Point
-    toPoint = tuplify2.map read.words
+    toPoint :: GameParams -> String -> Point
+    toPoint gp s = (\ (x,y) -> Point x y (rows gp) (cols gp)) $ (tuplify2.map read.words) s
     writeTile w p t = runSTArray $ do
       w' <- unsafeThaw w
       writeArray w' p MetaTile {tile = t, visible = Observed}
       return w'
 
 initialWorld :: GameParams -> World
-initialWorld gp = listArray ((0,0), (rows gp - 1, cols gp - 1)) $ repeat MetaTile {tile = Unknown, visible = Unobserved}
+initialWorld gp = 
+  let r = rows gp
+      c = cols gp in
+    listArray ((Point 0 0 r c), (Point (r - 1) (c - 1) r c)) $ repeat MetaTile {tile = Unknown, visible = Unobserved}
 
 createParams :: [(String, String)] -> GameParams
 createParams s =
@@ -132,13 +119,15 @@ createParams s =
       vr2 = lookup' "viewradius2"
       ar2 = lookup' "attackradius2"
       sr2 = lookup' "spawnradius2"
-      vp = getPointCircle vr2
-      ap = getPointCircle ar2
-      sp = getPointCircle sr2
+      r  = lookup' "rows"
+      c  = lookup' "cols"
+      vp = getPointCircle vr2 (r,c)
+      ap = getPointCircle ar2 (r,c)
+      sp = getPointCircle sr2 (r,c)
   in GameParams { loadtime      = lookup' "loadtime"
                 , turntime      = lookup' "turntime"
-                , rows          = lookup' "rows"
-                , cols          = lookup' "cols"
+                , rows          = r
+                , cols          = c
                 , turns         = lookup' "turns"
                 , playerSeed    = lookup' "player_seed"
                 , viewradius2   = vr2
@@ -172,7 +161,7 @@ gameLoop gp doTurn w (line:input)
       hPutStrLn stderr line
       time <- getCurrentTime
       let cs = break (isPrefixOf "go") input
-          gs = foldl' (updateGameState $ viewCircle gp) (GameState w [] [] [] time) (fst cs)
+          gs = foldl' (updateGameState gp $ viewCircle gp) (GameState w [] [] [] time) (fst cs)
       orders <- runReaderT doTurn gs
       mapM_ issueOrder orders
       finishTurn

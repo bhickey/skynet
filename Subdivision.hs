@@ -7,15 +7,22 @@ import Data.Maybe
 import System.Random
 import Control.Monad
 import Control.Monad.Random.Class
+import Data.Maybe
+import qualified Data.Queue as Q
 import qualified Data.Set as S
 import qualified Data.Map as M
 
 type SectorId = Int
+type OwnerGraph = Array Point (Maybe SectorId)
 
 data Subdivision = Subdivision
   { divDict :: M.Map SectorId Sector
   , pointDict :: Array Point (Maybe Sector)
   }
+
+data SearchNode = SearchNode
+  { nodePoint :: Point
+  , nodeId :: SectorId }
 
 data Sector = Sector
   { subId :: SectorId
@@ -46,7 +53,10 @@ toSectors :: [Point] -> [Sector]
 toSectors pl =
     zipWith (\ p id -> Sector id p (S.singleton p) S.empty) pl [0..]
 
-subdivideWith x y = y --do some BFS magic
+subdivideWith :: [Sector] -> Subdivision -> Subdivision
+subdivideWith sectors subdiv =
+    let searchQueue = Q.fromList $ map (\ s -> SearchNode (centroid s) (subId s)) sectors
+
 
 populateSubdivision :: World -> [Point] -> Subdivision
 populateSubdivision w pl = 
