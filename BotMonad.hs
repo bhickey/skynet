@@ -7,7 +7,6 @@ module BotMonad (
 ) where 
 
 import Ants
-import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Random
@@ -15,14 +14,10 @@ import Control.Monad.Reader.Class
 import Control.Monad.Trans.Reader (runReaderT, ReaderT)
 import Control.Monad.Trans.Class
 
-import Data.Array
-import Data.Array.IArray
-import Data.List (isPrefixOf, foldl')
-import Data.Char (digitToInt, toUpper)
-import Data.Maybe
 
 import Data.Time.Clock
-import Data.Time
+
+import System.IO
 
 
 

@@ -15,13 +15,8 @@ import GameRunner
 tryOrder :: World -> [Order] -> Maybe Order
 tryOrder w = find (passable w)
 
-generateOrders :: PathFinder -> [Point] -> Ant -> Maybe Order
-generateOrders s targets t =
-  let ap = pointAnt t
-      pth = minimumBy (\ a b -> compare (len a) (len b)) $ map (s ap) targets in
-    if (length $ path pth) > 0
-    then Just $ Order t (head $ path pth)
-    else Nothing
+generateOrders :: Ant -> Maybe Order
+generateOrders _ = Nothing
 
 {- |
  - Implement this function to create orders.
@@ -35,12 +30,9 @@ generateOrders s targets t =
 doTurn :: GameParams -> BotMonad [Order]
 doTurn gp = do
   gs <- ask
-  rc <- getRandomR (0, cols gp)
-  rr <- getRandomR (0, rows gp)
-  let targets = (rc,rr):(food gs)
-      searchFn = search gp (world gs)
-      orders = mapMaybe (generateOrders searchFn targets) $ myAnts $ ants gs in
-    debugMessage orders >>
+  _ <- getRandomR (0, cols gp)
+  _ <- getRandomR (0, rows gp)
+  let orders = mapMaybe generateOrders $ myAnts $ ants gs in
     return orders
 
 

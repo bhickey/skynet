@@ -44,12 +44,10 @@ import Control.Applicative
 
 import Data.Array
 import Data.Char (toUpper)
-import Data.Maybe
 
 import Data.Time.Clock
 
 import Point
-import Util
 
 --------------------------------------------------------------------------------
 -- Tiles -----------------------------------------------------------------------
@@ -137,8 +135,6 @@ type ImputedWorld = Array Point Tile
 colBound :: World -> Col
 colBound = col.snd.bounds
 
-rowBound :: World -> Row
-rowBound = row.snd.bounds
 
 -- | Accesses World using the modulus of the point
 (%!) :: World -> Point -> MetaTile
@@ -148,10 +144,10 @@ rowBound = row.snd.bounds
 renderWorld :: World -> String
 renderWorld w = concatMap renderAssoc (assocs w)
   where
-    maxCol = colBound w
+    maxColumn = colBound w
     renderAssoc :: (Point, MetaTile) -> String
     renderAssoc a
-      | col (fst a) == maxCol = renderTile (snd a) ++ "\n"
+      | col (fst a) == maxColumn = renderTile (snd a) ++ "\n"
       | otherwise = renderTile (snd a)
 
 --------------------------------------------------------------------------------
@@ -175,17 +171,12 @@ distance p1 p2 =
 twoNormSquared :: (Row, Col) -> Int
 twoNormSquared (r,c) = r ^ (2::Int) + c ^ (2::Int)
 
-inCycle :: Int -> Int -> Int
-inCycle c x =
-  if x < 0
-  then (x + c) `mod` c
-  else x `mod` c
 
 isWater :: World -> Point -> Bool
 isWater w p = tile (w ! p) == Water
 
-neighbors :: (Array Point e) -> Point -> [Point]
-neighbors w p =
+neighbors :: Point -> [Point]
+neighbors p =
     let n = neighbor p in
         [(n East)
         ,(n West)
@@ -240,20 +231,16 @@ enemyHills = filter isEnemy's
 -- Orders ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-instance Show Direction where
-  show North = "N"
-  show East  = "E"
-  show South = "S"
-  show West  = "W"
 
 data Order = Order Ant Direction deriving (Show)
 
 move :: Direction -> Point -> Point
-move dir (Point r c mr mc)
-  | dir == North = Point (r - 1) c mr mc
-  | dir == South = Point (r + 1) c mr mc
-  | dir == West  = Point r (c - 1) mr mc
-  | dir == East  = Point r (c + 1) mr mc
+move dir (Point r c mr mc) =
+ case dir of
+  North -> Point (r - 1) c mr mc
+  South -> Point (r + 1) c mr mc
+  West  -> Point r (c - 1) mr mc
+  East  -> Point r (c + 1) mr mc
 
 passable :: World -> Order -> Bool
 passable w (Order ant direction) =

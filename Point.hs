@@ -3,6 +3,14 @@ module Point where
 import Data.Ix
 
 data Direction = North | East | South | West deriving (Bounded, Eq, Enum)
+
+instance Show Direction where
+  show North = "N"
+  show East  = "E"
+  show South = "S"
+  show West  = "W"
+
+directions :: [Direction]
 directions = [North .. West]
 
 type Row = Int
