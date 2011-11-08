@@ -19,11 +19,6 @@ import Point
 
 
 
-sumPoint :: Point -> Point -> Point
-sumPoint x y = Point ((row x + row y) `mod` maxRow x) ((col x + col y) `mod` maxCol x) (maxRow x) (maxCol x)
-
-incPoint :: Point -> Point
-incPoint = sumPoint (Point 1 1 0 0)
 
 
 
@@ -45,17 +40,17 @@ setVisible mw p = do
   modifyWorld mw visibleMetaTile p
 
 addVisible :: World
-           -> [Point] -- viewPoints
+           -> GameParams -- viewPoints
            -> Point -- center point
            -> World
-addVisible w vp p = 
+addVisible w gp p = 
   runSTArray $ do 
     w' <- unsafeThaw w
-    mapM_ (setVisible w' . sumPoint p) vp
+    mapM_ (setVisible w') (viewCircle gp p)
     return w'
 
-updateGameState :: GameParams -> [Point] -> GameState -> String -> GameState
-updateGameState gp vp gs s
+updateGameState :: GameParams -> GameState -> String -> GameState
+updateGameState gp gs s
   | "f" `isPrefixOf` s = -- add food
       let p = toPoint.tail $ s
           fs' = p:food gs
@@ -76,7 +71,7 @@ updateGameState gp vp gs s
           p = toPoint.init.tail $ s
           as' = Ant { pointAnt = p, ownerAnt = own}:ants gs
           nw = writeTile (world gs) p $ AntTile own
-          nw' = if own == Me then addVisible nw vp p else nw
+          nw' = if own == Me then addVisible nw gp p else nw
       in GameState nw' as' (food gs) (hills gs) (startTime gs)
   | "d" `isPrefixOf` s = -- add dead ant
       let own = toOwner.digitToInt.last $ s
@@ -106,9 +101,6 @@ createParams s =
       sr2 = lookup' "spawnradius2"
       r  = lookup' "rows"
       c  = lookup' "cols"
-      vp = getPointCircle vr2 (r,c)
-      ap = getPointCircle ar2 (r,c)
-      sp = getPointCircle sr2 (r,c)
   in GameParams { loadtime      = lookup' "loadtime"
                 , turntime      = lookup' "turntime"
                 , rows          = r
@@ -118,9 +110,9 @@ createParams s =
                 , viewradius2   = vr2
                 , attackradius2 = ar2
                 , spawnradius2  = sr2
-                , viewCircle    = vp
-                , attackCircle  = ap
-                , spawnCircle   = sp
+                --, viewCircle    = vp
+                --, attackCircle  = ap
+                --, spawnCircle   = sp
                 }
 
 modifyWorld :: MWorld s -> (MetaTile -> MetaTile) -> Point -> ST s ()
@@ -147,7 +139,7 @@ gameLoop gp doTurn w (line:input)
       hPutStrLn stderr line
       time <- getCurrentTime
       let cs = break (isPrefixOf "go") input
-          gs = foldl' (updateGameState gp $ viewCircle gp) (GameState w [] [] [] time) (fst cs)
+          gs = foldl' (updateGameState gp) (GameState w [] [] [] time) (fst cs)
       gen <- newStdGen
       orders <- runBotMonad doTurn gs gen
       mapM_ issueOrder orders

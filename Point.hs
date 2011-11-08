@@ -1,6 +1,17 @@
-module Point where
+module Point(
+ Point(..),
+ Direction(..),
+ directions,
+ neighbor,
+ point,
+ viewCircle,
+ 
+
+) where
 
 import Data.Ix
+import Control.Applicative
+import GameParams
 
 data Direction = North | East | South | West deriving (Bounded, Eq, Enum, Ord)
 
@@ -30,9 +41,40 @@ instance Ix Point where
     (row a <= row i && row i <= row b) &&
     (col a <= col i && col i <= col b)
 
+
+point :: GameParams -> Int -> Int -> Point
+point gp r c = Point (r `mod` mR) (c `mod` mC) mR mC
+ where
+  mR = rows gp
+  mC = cols gp
+
 neighbor :: Point -> Direction -> Point
 neighbor (Point r c mR mC) North = (Point ((r + 1) `mod` mR) c mR mC)
 neighbor (Point r c mR mC) East = (Point r ((c + 1) `mod` mC) mR mC)
 neighbor (Point r c mR mC) South = (Point ((r - 1 + mR) `mod` mR) c mR mC)
 neighbor (Point r c mR mC) West = (Point r ((c - 1 + mC) `mod` mC) mR mC)
     
+
+
+deltaPoint :: Int -> Int -> Point -> Point
+deltaPoint x y (Point r c mr mc) =
+ Point ((x + r) `mod` mr) ((y + c) `mod` mc) mr mc
+
+
+
+
+-- | Computes the square of the two norm.
+twoNormSquared :: (Row, Col) -> Int
+twoNormSquared (r,c) = r ^ (2::Int) + c ^ (2::Int)
+
+
+getPointCircle :: Int -- radius squared
+               -> Point -> [Point]
+getPointCircle r2 p =
+  let rx = truncate.sqrt.(fromIntegral::Int -> Double) $ r2
+  in map deltaPoint' $ filter ((<=r2).twoNormSquared) $ (,) <$> [-rx..rx] <*> [-rx..rx]
+  where deltaPoint' (x,y) = deltaPoint x y p 
+
+viewCircle :: GameParams -> Point -> [Point]
+viewCircle gp p = getPointCircle (viewradius2 gp) p
+

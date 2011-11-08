@@ -16,15 +16,12 @@ module Ants
 
     -- Coordinates
   , Point
-  , Row
-  , Col
   , (%!)
 
     -- Tile Functions
   , isAnt
   , isDead
   , isWater
-  , getPointCircle
   , visibleMetaTile
   , toOwner
   , impute
@@ -40,7 +37,6 @@ module Ants
 
   ) where
 
-import Control.Applicative
 
 import Data.Array
 import qualified Data.Array.IArray as IA
@@ -49,6 +45,7 @@ import Data.Char (toUpper)
 import Data.Time.Clock
 
 import Point
+import GameParams
 
 --------------------------------------------------------------------------------
 -- Tiles -----------------------------------------------------------------------
@@ -137,7 +134,7 @@ impute :: World -> ImputedWorld
 impute w = IA.amap tile w
 
 
-colBound :: World -> Col
+colBound :: World -> Int
 colBound = col.snd.bounds
 
 
@@ -172,9 +169,6 @@ distance p1 p2 =
       cold = modDistance (maxCol p1) (col p1) (col p2)
   in rowd + cold
 
--- | Computes the square of the two norm.
-twoNormSquared :: (Row, Col) -> Int
-twoNormSquared (r,c) = r ^ (2::Int) + c ^ (2::Int)
 
 
 isWater :: World -> Point -> Bool
@@ -190,11 +184,6 @@ neighbors p =
         ]
 
 
-getPointCircle :: Int -- radius squared
-               -> (Row, Col) -> [Point]
-getPointCircle r2 (mr,mc) =
-  let rx = truncate.sqrt.(fromIntegral::Int -> Double) $ r2
-  in map (\ (r,c) -> Point r c mr mc) $ filter ((<=r2).twoNormSquared) $ (,) <$> [-rx..rx] <*> [-rx..rx]
 
 --------------------------------------------------------------------------------
 -- Ants ------------------------------------------------------------------------
@@ -268,19 +257,4 @@ data GameState = GameState
   , hills :: [Hill] -- call "hills GameState" to all hills
   , startTime :: UTCTime
   }
-
-data GameParams = GameParams
-  { loadtime :: Int
-  , turntime :: Int
-  , rows :: Int
-  , cols :: Int
-  , turns :: Int
-  , playerSeed :: Int
-  , viewradius2 :: Int
-  , attackradius2 :: Int
-  , spawnradius2 :: Int
-  , viewCircle :: [Point]
-  , attackCircle :: [Point]
-  , spawnCircle :: [Point]
-  } deriving (Show)
 
