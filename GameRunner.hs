@@ -81,7 +81,7 @@ updateGameState gp gs s
   | otherwise = gs -- ignore line
   where
     toPoint :: String -> Point
-    toPoint = (\ (x,y)-> (Point x y (rows gp) (cols gp))).tuplify2.map read.words
+    toPoint = (uncurry $ point gp) .tuplify2.map read.words
     writeTile w p t = runSTArray $ do
       w' <- unsafeThaw w
       writeArray w' p MetaTile {tile = t, visible = Observed}
@@ -91,7 +91,7 @@ initialWorld :: GameParams -> World
 initialWorld gp = 
   let r = rows gp
       c = cols gp in
-    listArray ((Point 0 0 r c), (Point (r - 1) (c - 1) r c)) $ repeat MetaTile {tile = Unknown, visible = Unobserved}
+    listArray ((point gp 0 0), (point gp (r - 1) (c - 1))) $ repeat MetaTile {tile = Unknown, visible = Unobserved}
 
 createParams :: [(String, String)] -> GameParams
 createParams s =

@@ -152,22 +152,7 @@ renderWorld w = concatMap renderAssoc (assocs w)
       | col (fst a) == maxColumn = renderTile (snd a) ++ "\n"
       | otherwise = renderTile (snd a)
 
---------------------------------------------------------------------------------
--- Norms and Metrics -----------------------------------------------------------
--- https://secure.wikimedia.org/wikipedia/en/wiki/Norm_(mathematics) -----------
---------------------------------------------------------------------------------
-modDistance :: Int -- modulus
-            -> Int -> Int -> Int
-modDistance m x y = 
-  let a = abs $ x - y
-  in min a (m - a)
 
--- | Computes manhattan distance.
-distance :: Point -> Point -> Int
-distance p1 p2 =
-  let rowd = modDistance (maxRow p1) (row p1) (row p2)
-      cold = modDistance (maxCol p1) (col p1) (col p2)
-  in rowd + cold
 
 
 
@@ -228,17 +213,9 @@ enemyHills = filter isEnemy's
 
 data Order = Order Ant Direction deriving (Show)
 
-move :: Direction -> Point -> Point
-move dir (Point r c mr mc) =
- case dir of
-  North -> Point (r - 1) c mr mc
-  South -> Point (r + 1) c mr mc
-  West  -> Point r (c - 1) mr mc
-  East  -> Point r (c + 1) mr mc
-
 passable :: World -> Order -> Bool
 passable w (Order ant direction) =
-  let newPoint = move direction (pointAnt ant) 
+  let newPoint = neighbor (pointAnt ant) direction
   in  tile (w %! newPoint) /= Water
 
 toOwner :: Int -> Owner

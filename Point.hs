@@ -1,10 +1,11 @@
 module Point(
- Point(..),
+ Point(row,col),
  Direction(..),
  directions,
  neighbor,
  point,
  viewCircle,
+ distance,
  
 
 ) where
@@ -29,8 +30,8 @@ type Col = Int
 data Point = Point
   { row :: Row
   , col :: Col
-  , maxRow :: Row
-  , maxCol :: Col
+  , _maxRow :: Row
+  , _maxCol :: Col
   } deriving (Show, Eq, Ord)
 
 -- We should probably be checking these values
@@ -60,6 +61,24 @@ deltaPoint :: Int -> Int -> Point -> Point
 deltaPoint x y (Point r c mr mc) =
  Point ((x + r) `mod` mr) ((y + c) `mod` mc) mr mc
 
+--------------------------------------------------------------------------------
+-- Norms and Metrics -----------------------------------------------------------
+-- https://secure.wikimedia.org/wikipedia/en/wiki/Norm_(mathematics) -----------
+--------------------------------------------------------------------------------
+
+modDistance :: Int -- modulus
+            -> Int -> Int -> Int
+modDistance m x y =
+  let a = abs $ x - y
+  in min a (m - a)
+
+
+-- | Computes manhattan distance.
+distance :: Point -> Point -> Int
+distance (Point r1 c1 mr1 mc1) (Point r2 c2 _mr2 _mc2) =
+  let rowd = modDistance mr1 r1 r2
+      cold = modDistance mc1 c1 c2
+  in rowd + cold
 
 
 
