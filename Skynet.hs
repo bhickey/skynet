@@ -1,12 +1,7 @@
 module Main where
 
-import Data.List
 import Data.Maybe (mapMaybe)
 import Control.Monad.Reader.Class
-import Control.Monad.Random
-import System.IO
-
-import System.IO.Unsafe
 
 import Ants
 import BotMonad
@@ -17,11 +12,11 @@ import Diffusion
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
 tryOrder :: World -> [Order] -> Maybe Order
-tryOrder w [] = Nothing
+tryOrder _ [] = Nothing
 tryOrder _ o = Just $ head o
 
 generateOrders :: World -> DiffusionGrid -> Ant -> Maybe Order
-generateOrders w d a@(Ant p _) = tryOrder w $ map (\ d -> Order a d) (bestScore d p)
+generateOrders w d a@(Ant p _) = tryOrder w $ map (\ dir -> Order a dir) (bestScore d p)
 
 {- |
  - Implement this function to create orders.
@@ -33,9 +28,9 @@ generateOrders w d a@(Ant p _) = tryOrder w $ map (\ d -> Order a d) (bestScore 
  -}
 
 doTurn :: GameParams -> BotMonad [Order]
-doTurn gp = do
+doTurn _ = do
   gs <- ask
-  let grid = (iterate (diffuse rule) $ diffusionGrid $ impute (world gs)) !! 20
+  let grid = (iterate (diffuse rule) $ diffusionGrid $ impute (world gs)) !! 10
       orders = mapMaybe (generateOrders (world gs) grid) $ myAnts $ ants gs in
     return orders
 
