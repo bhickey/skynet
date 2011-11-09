@@ -37,7 +37,7 @@ type Rule = (Automata -> [Automata] -> Automata)
 
 rule (Automata _ _ _  _ _ True) _ = waterAutomata
 rule (Automata a _ fD _ _ False) tiles = 
-  let denom = if a == 1 then 4.0 else 2.0
+  let denom = if a == 1 then 1.2 else 1.1
       fD' = max fD ((foldl1 max $ map foodProb tiles) / denom) in
     Automata 0 0 fD' 0.0 0.0 False
 
@@ -52,7 +52,7 @@ applyRules grid rule i e =
 bestScore :: DiffusionGrid -> Point -> [Direction]
 bestScore dg p =
     let points = zip (map foodProb (map (dg !) (map (neighbor p) directions))) directions in
-      map snd $ L.sortBy (\ (a,_) (b,_) -> compare b a) points
+      map snd $ L.sortBy (\ (a,_) (b,_) -> compare a b) points
    
 diffuse :: Rule -> DiffusionGrid -> DiffusionGrid
 diffuse r dg = aimap dg (applyRules dg r)

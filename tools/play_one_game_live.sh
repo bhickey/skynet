@@ -3,5 +3,4 @@
 	"python sample_bots/GreedyBot.py" \
 	"python sample_bots/GreedyBot.py" \
 	"python sample_bots/GreedyBot.py" \
-	"Skynet" \
 java -jar visualizer.jar
