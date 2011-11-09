@@ -6,6 +6,8 @@ import Control.Monad.Reader.Class
 import Control.Monad.Random
 import System.IO
 
+import System.IO.Unsafe
+
 import Ants
 import BotMonad
 import GameRunner
@@ -15,7 +17,8 @@ import Diffusion
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
 tryOrder :: World -> [Order] -> Maybe Order
-tryOrder w = find (passable w)
+tryOrder w [] = Nothing
+tryOrder _ o = Just $ head o
 
 generateOrders :: World -> DiffusionGrid -> Ant -> Maybe Order
 generateOrders w d a@(Ant p _) = tryOrder w $ map (\ d -> Order a d) (bestScore d p)
@@ -32,7 +35,7 @@ generateOrders w d a@(Ant p _) = tryOrder w $ map (\ d -> Order a d) (bestScore 
 doTurn :: GameParams -> BotMonad [Order]
 doTurn gp = do
   gs <- ask
-  let grid = (iterate (diffuse rule) $ diffusionGrid $ impute (world gs)) !! 15
+  let grid = (iterate (diffuse rule) $ diffusionGrid $ impute (world gs)) !! 20
       orders = mapMaybe (generateOrders (world gs) grid) $ myAnts $ ants gs in
     return orders
 
