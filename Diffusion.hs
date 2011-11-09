@@ -45,7 +45,7 @@ diffusionGrid w = amap tileToEnum w
 
 applyRules :: DiffusionGrid -> Rule -> Point -> Automata -> Automata
 applyRules grid rule i e =
-  let n = (grid ! i):(map (grid !) (neighbors i)) in
+  let n = (map (grid !) (neighbors i)) in
    rule e n
 
 bestScore :: DiffusionGrid -> Point -> [Direction]

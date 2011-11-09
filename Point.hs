@@ -20,7 +20,15 @@ data Point = Point
   , col :: Col
   , maxRow :: Row
   , maxCol :: Col
-  } deriving (Show, Eq, Ord, Ix)
+  } deriving (Show, Eq, Ord)
+
+-- We should probably be checking these values
+instance Ix Point where
+  range (Point ra ca mra mca, Point rb cb mrb mcb) = [Point r c mra mca | r <- [ra..rb], c <- [ca..cb]]
+  index (a,b) p = (row p - row a) * (maxCol p - col a) +  (col p - col a)
+  inRange (a,b) i =
+    (row a <= row i && row i <= row b) &&
+    (col a <= col i && col i <= col b)
 
 neighbor :: Point -> Direction -> Point
 neighbor (Point r c mR mC) North = (Point ((r + 1) `mod` mR) c mR mC)
