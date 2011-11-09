@@ -2,76 +2,56 @@ module Diffusion where
                   
 import Data.Array.Diff
 import Data.Ix
-import Point
 import Data.Maybe
+import Data.List as L
+
+import Point
 import Ants
 
 aimap :: (Ix i) => (Array i e) -> (i -> e -> c) -> (Array i c)
 aimap a f = listArray (bounds a) $ fmap (uncurry f) (assocs a)
 
-data Automata = FriendlyAnt | EnemyAnt | Food | MyHill | EnemyHill | WaterTile deriving (Bounded, Eq, Enum, Ix, Ord)
+data Automata = Automata
+  { friendlyAnt :: Int
+  , enemyAnt :: Int
+  , foodProb :: Float
+  , friendlyHill :: Float
+  , enemyHill :: Float
+  , water :: Bool
+  }
 
-emptyAutomata = array (FriendlyAnt, EnemyHill) $ zip [FriendlyAnt .. WaterTile] (repeat 0.0)
+emptyAutomata = Automata 0 0 0.0 0.0 0.0 False
+waterAutomata = Automata 0 0 0.0 0.0 0.0 True
 
-tileToEnum :: Tile -> AutomataArray
-tileToEnum (AntTile Me)  = emptyAutomata // [(FriendlyAnt, 1.0)]
-tileToEnum (AntTile _)   = emptyAutomata // [(EnemyAnt, 1.0)]
-tileToEnum (HillTile Me) = emptyAutomata // [(MyHill, 1.0)]
-tileToEnum (HillTile _)  = emptyAutomata // [(EnemyAnt, 1.0)]
-tileToEnum FoodTile  = emptyAutomata // [(Food, 1.0)]
-tileToEnum Water = emptyAutomata // [(WaterTile, 1.0)]
-tileToEnum _ = emptyAutomata
+tileToEnum :: Tile -> Automata
+tileToEnum (AntTile Me)  = Automata 1 0 0.0 0.0 0.0 False 
+tileToEnum (AntTile _)   = Automata 0 1 0.0 0.0 0.0 False
+tileToEnum (HillTile Me) = Automata 0 0 0.0 1.0 0.0 False
+tileToEnum (HillTile _)  = Automata 0 0 0.0 0.0 1.0 False
+tileToEnum FoodTile      = Automata 0 0 1.0 0.0 0.0 False
+tileToEnum Water         = waterAutomata
+tileToEnum _             = emptyAutomata
 
-type AutomataArray = Array Automata Float
-type DiffusionGrid = Array Point AutomataArray
-type Rule = (AutomataArray -> Float -> Float -> Float)
-type DiffusionRules = Array Automata (Maybe (Int, Rule))
+type DiffusionGrid = Array Point Automata
+type Rule = (Automata -> [Automata] -> Automata)
 
-rules :: DiffusionRules
-rules = array (FriendlyAnt, WaterTile) $
-    [(FriendlyAnt, Just (5, friendRule)),
-     (EnemyAnt, Just (5, enemyRule)),
-     (Food, Just (20, foodRule)),
-     (MyHill, Just (20, hillRule)),
-     (EnemyHill, Just (20, enemyHillRule)),
-     (WaterTile, Just (20, waterRule))]
-
-friendRule :: Rule
-friendRule aa x y =
-   if aa ! WaterTile == 1.0
-   then 0.0
-   else max x y
-
-enemyRule = friendRule
-foodRule = friendRule
-hillRule = friendRule
-enemyHillRule = friendRule
-waterRule = friendRule
-
-updateRule :: Maybe (Int, Rule) -> Maybe (Int, Rule)
-updateRule (Just (1, _)) = Nothing
-updateRule (Just (x, f)) = Just (x - 1, f)
-updateRule Nothing = Nothing
-
-updateRules :: DiffusionRules -> DiffusionRules
-updateRules = amap updateRule
+rule (Automata _ _ _  _ _ True) _ = waterAutomata
+rule (Automata _ _ fD _ _ False) tiles = 
+  let fD' = max fD ((foldl1 max $ map foodProb tiles) / 2.0) in
+    Automata 0 0 fD' 0.0 0.0 False
 
 diffusionGrid :: ImputedWorld -> DiffusionGrid
 diffusionGrid w = amap tileToEnum w
 
-getRule :: DiffusionRules -> Automata -> Rule
-getRule dr auto = 
-  case dr ! auto of
-    Nothing -> (\ _ x _ -> x)
-    Just (_, f) -> f
+applyRules :: DiffusionGrid -> Rule -> Point -> Automata -> Automata
+applyRules grid rule i e =
+  let n = (grid ! i):(map (grid !) (neighbors i)) in
+   rule e n
 
-mapRules :: DiffusionRules -> AutomataArray -> AutomataArray -> AutomataArray
-mapRules dr a b = aimap a (\ i e -> ((getRule dr i) a) e (b ! i))
-
-applyRules :: DiffusionGrid -> DiffusionRules -> Point -> AutomataArray -> AutomataArray
-applyRules grid rules i e =
-  let n = (grid ! i):(map (grid !) (neighbors grid i)) in
-   foldl1 (mapRules rules) n
-    
-diffuse :: (DiffusionGrid, DiffusionRules) -> (DiffusionGrid, DiffusionRules)
-diffuse (dg, dr) = (aimap dg (applyRules dg dr), updateRules dr)
+bestScore :: DiffusionGrid -> Point -> [Direction]
+bestScore dg p =
+    let points = zip (map foodProb (map (dg !) (map (neighbor p) directions))) directions in
+      map snd $ L.reverse $ L.sort points
+   
+diffuse :: Rule -> DiffusionGrid -> DiffusionGrid
+diffuse r dg = aimap dg (applyRules dg r)

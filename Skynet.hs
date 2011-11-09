@@ -10,13 +10,15 @@ import Ants
 import BotMonad
 import GameRunner
 
+import Diffusion
+
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
 tryOrder :: World -> [Order] -> Maybe Order
 tryOrder w = find (passable w)
 
-generateOrders :: Ant -> Maybe Order
-generateOrders _ = Nothing
+generateOrders :: World -> DiffusionGrid -> Ant -> Maybe Order
+generateOrders w d a@(Ant p _) = tryOrder w $ map (\ d -> Order a d) (bestScore d p)
 
 {- |
  - Implement this function to create orders.
@@ -30,9 +32,8 @@ generateOrders _ = Nothing
 doTurn :: GameParams -> BotMonad [Order]
 doTurn gp = do
   gs <- ask
-  _ <- getRandomR (0, cols gp)
-  _ <- getRandomR (0, rows gp)
-  let orders = mapMaybe generateOrders $ myAnts $ ants gs in
+  let grid = (iterate (diffuse rule) $ diffusionGrid $ impute (world gs)) !! 15
+      orders = mapMaybe (generateOrders (world gs) grid) $ myAnts $ ants gs in
     return orders
 
 

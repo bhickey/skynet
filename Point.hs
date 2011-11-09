@@ -2,7 +2,7 @@ module Point where
 
 import Data.Ix
 
-data Direction = North | East | South | West deriving (Bounded, Eq, Enum)
+data Direction = North | East | South | West deriving (Bounded, Eq, Enum, Ord)
 
 instance Show Direction where
   show North = "N"

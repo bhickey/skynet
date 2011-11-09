@@ -27,7 +27,7 @@ module Ants
   , getPointCircle
   , visibleMetaTile
   , toOwner
-
+  , impute
     -- Utility functions
   , myAnts
   , enemyAnts
@@ -43,6 +43,7 @@ module Ants
 import Control.Applicative
 
 import Data.Array
+import qualified Data.Array.IArray as IA
 import Data.Char (toUpper)
 
 import Data.Time.Clock
@@ -131,6 +132,10 @@ visibleMetaTile m
 --------------------------------------------------------------------------------
 type World = Array Point MetaTile
 type ImputedWorld = Array Point Tile
+
+impute :: World -> ImputedWorld
+impute w = IA.amap tile w
+
 
 colBound :: World -> Col
 colBound = col.snd.bounds
