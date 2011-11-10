@@ -10,13 +10,28 @@ aimap :: (Ix i) => (Array i e) -> (i -> e -> c) -> (Array i c)
 aimap a f = listArray (bounds a) $ fmap (uncurry f) (assocs a)
 
 data Automata = WaterAutomata |
-                Automata
-                  { friendlyAnt :: Int
-                  , enemyAnt :: Int
-                  , foodProb :: Int
-                  , friendlyHill :: Float
-                  , enemyHill :: Float
-                  } deriving (Show)
+                Automata Int Int Int Float Float deriving (Show)
+
+friendlyAnt :: Automata -> Int
+friendlyAnt WaterAutomata = 0
+friendlyAnt (Automata f _ _ _ _) = f
+
+enemyAnt :: Automata -> Int
+enemyAnt WaterAutomata = 0
+enemyAnt (Automata _ e _ _ _) = e
+
+foodProb :: Automata -> Int
+foodProb WaterAutomata = 0
+foodProb (Automata _ _ fp _ _) = fp
+
+friendlyHill :: Automata -> Float
+friendlyHill WaterAutomata = 0
+friendlyHill (Automata _ _ _ fh _) = fh
+
+enemyHill :: Automata -> Float
+enemyHill WaterAutomata = 0
+enemyHill (Automata _ _ _ _ eh) = eh
+
 
 emptyAutomata :: Automata
 emptyAutomata = Automata 0 0 0 0.0 0.0
