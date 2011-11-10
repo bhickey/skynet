@@ -7,7 +7,6 @@ module BotMonad (
 ) where 
 
 import Ants
-import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Random
 import Control.Monad.Reader.Class
