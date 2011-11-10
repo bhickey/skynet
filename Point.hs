@@ -36,8 +36,9 @@ data Point = Point
 
 -- We should probably be checking these values
 instance Ix Point where
-  range (Point ra ca mra mca, Point rb cb mrb mcb) = [Point r c mra mca | r <- [ra..rb], c <- [ca..cb]]
-  index (a,b) p = (row p - row a) * (maxCol p - col a) +  (col p - col a)
+  range (Point ra ca mra mca, Point rb cb _mrb _mcb) = [Point r c mra mca | r <- [ra..rb], c <- [ca..cb]]
+  index (Point ra ca _mra _mca, _b) (Point rp cp _mrp mcp) =
+    (rp - ra) * (mcp - ca) + (cp - ca)
   inRange (a,b) i =
     (row a <= row i && row i <= row b) &&
     (col a <= col i && col i <= col b)
