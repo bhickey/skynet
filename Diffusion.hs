@@ -39,14 +39,19 @@ emptyAutomata = Automata 0 0 0 0.0 0.0
 waterAutomata :: Automata
 waterAutomata = WaterAutomata
 
+itemToEnum :: Item -> Automata
+itemToEnum (LiveAntItem Me)  = Automata 1 0 0 0.0 0.0
+itemToEnum (LiveAntItem _)   = Automata 0 1 0 0.0 0.0
+itemToEnum (DeadAntItem _)   = emptyAutomata
+itemToEnum (HillItem Me)     = Automata 0 0 0 1.0 0.0
+itemToEnum (HillItem _)      = Automata 0 0 0 0.0 1.0
+itemToEnum FoodItem          = Automata 0 0 100 0.0 0.0
+itemToEnum BlankItem         = emptyAutomata
+
 tileToEnum :: Tile -> Automata
-tileToEnum (AntTile Me)  = Automata 1 0 0 0.0 0.0
-tileToEnum (AntTile _)   = Automata 0 1 0 0.0 0.0
-tileToEnum (HillTile Me) = Automata 0 0 0 1.0 0.0
-tileToEnum (HillTile _)  = Automata 0 0 0 0.0 1.0
-tileToEnum FoodTile      = Automata 0 0 100 0.0 0.0
-tileToEnum Water         = waterAutomata
-tileToEnum _             = emptyAutomata
+tileToEnum WaterTile       = waterAutomata
+tileToEnum (LandTile item) = itemToEnum item
+tileToEnum UnknownTile     = emptyAutomata
 
 type DiffusionGrid = Array Point Automata
 type Rule = (Automata -> [Automata] -> Automata)

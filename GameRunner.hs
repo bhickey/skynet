@@ -32,8 +32,8 @@ type MWorld s = STArray s Point MetaTile
 --   and makes the tile invisible.
 clearMetaTile :: MetaTile -> MetaTile
 clearMetaTile m
-  | fOr (tile m) [isAnt, (==FoodTile), isDead] = MetaTile {tile = Land, visible = Unobserved }
-  | otherwise = MetaTile {tile = tile m, visible = Unobserved }
+  | fOr (tile m) [isLiveAnt, isFood, isDeadAnt] = MetaTile (LandTile BlankItem) Unobserved
+  | otherwise = MetaTile (tile m) Unobserved
 
 setVisible :: MWorld s -> Point -> ST s ()
 setVisible mw p = do
@@ -54,29 +54,29 @@ updateGameState gp gs s
   | "f" `isPrefixOf` s = -- add food
       let p = toPoint.tail $ s
           fs' = p:food gs
-          nw = writeTile (world gs) p FoodTile
+          nw = writeTile (world gs) p (LandTile FoodItem)
       in GameState nw (ants gs) fs' (hills gs) (startTime gs)
   | "w" `isPrefixOf` s = -- add water
       let p = toPoint.tail $ s
-          nw = writeTile (world gs) p Water
+          nw = writeTile (world gs) p WaterTile
       in GameState nw (ants gs) (food gs) (hills gs) (startTime gs)
   | "h" `isPrefixOf` s = -- add hill
       let p = toPoint.init.tail $ s
           own = toOwner.digitToInt.last $ s
           hs = Hill { pointHill = p, ownerHill = own}:hills gs
-          nw = writeTile (world gs) p $ HillTile own
+          nw = writeTile (world gs) p . LandTile . HillItem $ own
       in GameState nw (ants gs) (food gs) hs (startTime gs)
   | "a" `isPrefixOf` s = -- add ant
       let own = toOwner.digitToInt.last $ s
           p = toPoint.init.tail $ s
           as' = Ant { pointAnt = p, ownerAnt = own}:ants gs
-          nw = writeTile (world gs) p $ AntTile own
+          nw = writeTile (world gs) p . LandTile . LiveAntItem $ own
           nw' = if own == Me then addVisible nw gp p else nw
       in GameState nw' as' (food gs) (hills gs) (startTime gs)
   | "d" `isPrefixOf` s = -- add dead ant
       let own = toOwner.digitToInt.last $ s
           p = toPoint.init.tail $ s
-          nw = writeTile (world gs) p $ Dead own
+          nw = writeTile (world gs) p . LandTile . DeadAntItem $  own
       in GameState nw (ants gs) (food gs) (hills gs) (startTime gs)
   | otherwise = gs -- ignore line
   where
@@ -91,7 +91,7 @@ initialWorld :: GameParams -> World
 initialWorld gp = 
   let r = rows gp
       c = cols gp in
-    listArray ((point gp 0 0), (point gp (r - 1) (c - 1))) $ repeat MetaTile {tile = Unknown, visible = Unobserved}
+    listArray ((point gp 0 0), (point gp (r - 1) (c - 1))) . repeat $ MetaTile UnknownTile Unobserved
 
 createParams :: [(String, String)] -> GameParams
 createParams s =

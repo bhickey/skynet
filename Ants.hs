@@ -9,6 +9,7 @@ module Ants
   , World
   , ImputedWorld
   , Hill (..)
+  , Item (..)
   , Tile (..)
   , MetaTile (..)
   , GameParams (..)
@@ -19,8 +20,13 @@ module Ants
   , (%!)
 
     -- Tile Functions
-  , isAnt
-  , isDead
+  , isLiveAnt
+  , isDeadAnt
+  , isLiveEnemyAnt
+  , isDeadEnemyAnt
+  , isHill
+  , isEnemyHill
+  , isFood
   , isWater
   , visibleMetaTile
   , toOwner
@@ -50,14 +56,8 @@ import GameParams
 --------------------------------------------------------------------------------
 -- Tiles -----------------------------------------------------------------------
 --------------------------------------------------------------------------------
-data Tile = AntTile Owner
-          | Dead Owner
-          | HillTile Owner
-          | Land
-          | FoodTile
-          | Water
-          | Unknown
-          deriving (Show,Eq)
+data Item = LiveAntItem Owner | DeadAntItem Owner | HillItem Owner | FoodItem | BlankItem deriving (Show,Eq)
+data Tile = LandTile Item | WaterTile | UnknownTile deriving (Show,Eq)
 
 data Visibility = 
     Observed
@@ -71,57 +71,64 @@ data MetaTile = MetaTile
   , visible :: Visibility
   } deriving (Show)
 
-{-
- Unused Tile functions
+isLiveAnt, isDeadAnt, isLiveEnemyAnt, isDeadEnemyAnt, isHill, isEnemyHill, isFood, isWater :: Tile -> Bool
 
-isHill (HillTile _) = True
+isLiveAnt (LandTile (LiveAntItem _)) = True
+isLiveAnt _ = False
+
+isDeadAnt (LandTile (DeadAntItem _)) = True
+isDeadAnt _ = False
+
+isLiveEnemyAnt (LandTile (LiveAntItem (Enemy _))) = True
+isLiveEnemyAnt _ = False
+
+isDeadEnemyAnt (LandTile (DeadAntItem (Enemy _))) = True
+isDeadEnemyAnt _ = False
+
+isHill (LandTile (HillItem _)) = True
 isHill _ = False
 
+isEnemyHill (LandTile (HillItem (Enemy _))) = True
+isEnemyHill _ = False
 
--}
+isWater WaterTile = True
+isWater _ = False
 
-isAnt, isDead, isAntEnemy, isDeadEnemy, isHillEnemy :: Tile -> Bool
-isAntEnemy (AntTile (Enemy _)) = True
-isAntEnemy _ = False
+isFood (LandTile FoodItem) = True
+isFood _ = False
 
-isHillEnemy (HillTile (Enemy _)) = True
-isHillEnemy _ = False
-
-isDeadEnemy (Dead (Enemy _)) = True
-isDeadEnemy _ = False
-
-isAnt (AntTile _) = True
-isAnt _ = False
-
-isDead (Dead _) = True
-isDead _ = False
 
 
 -- | For debugging
-renderTile :: MetaTile -> String
-renderTile m
-  | tile m == AntTile Me = visibleUpper m 'm'
-  | isAntEnemy $ tile m = visibleUpper m 'e'
-  | tile m == Dead Me = visibleUpper m 'd'
-  | isDeadEnemy $ tile m = visibleUpper m 'd'
-  | tile m == Land = visibleUpper m 'l'
-  | tile m == HillTile Me = visibleUpper m 'h'
-  | isHillEnemy $ tile m = visibleUpper m 'x'
-  | tile m == FoodTile = visibleUpper m 'f'
-  | tile m == Water = visibleUpper m 'w'
-  | otherwise = "*"
+
+renderItem :: Item -> Char
+renderItem (LiveAntItem Me) = 'm'
+renderItem (LiveAntItem _) = 'e'
+renderItem (DeadAntItem _) = 'd'
+renderItem (HillItem Me) = 'h'
+renderItem (HillItem _) = 'x'
+renderItem BlankItem = 'l'
+renderItem FoodItem = 'f'
+
+
+renderMetaTile :: MetaTile -> String
+renderMetaTile (MetaTile t v) =
+  upper $ case t of
+    LandTile item -> renderItem item
+    WaterTile -> 'w'
+    UnknownTile -> '*'
   where
-    visibleUpper :: MetaTile -> Char -> String
-    visibleUpper mt c =
-      case visible mt of
+    upper :: Char -> String
+    upper c =
+      case v of
         Observed -> [toUpper c]
         _ -> [c]
 
+
 -- | Sets the tile to visible, if the tile is still unknown then it is land.
 visibleMetaTile :: MetaTile -> MetaTile
-visibleMetaTile m
-  | tile m == Unknown = MetaTile {tile = Land, visible = Observed }
-  | otherwise         = MetaTile {tile = tile m, visible = Observed }
+visibleMetaTile (MetaTile UnknownTile _) = MetaTile (LandTile BlankItem) Observed
+visibleMetaTile (MetaTile t _) = MetaTile t Observed
 
 
 --------------------------------------------------------------------------------
@@ -149,15 +156,13 @@ renderWorld w = concatMap renderAssoc (assocs w)
     maxColumn = colBound w
     renderAssoc :: (Point, MetaTile) -> String
     renderAssoc a
-      | col (fst a) == maxColumn = renderTile (snd a) ++ "\n"
-      | otherwise = renderTile (snd a)
+      | col (fst a) == maxColumn = renderMetaTile (snd a) ++ "\n"
+      | otherwise = renderMetaTile (snd a)
 
 
 
 
 
-isWater :: World -> Point -> Bool
-isWater w p = tile (w ! p) == Water
 
 neighbors :: Point -> [Point]
 neighbors p =
@@ -216,7 +221,7 @@ data Order = Order Ant Direction deriving (Show)
 passable :: World -> Order -> Bool
 passable w (Order ant direction) =
   let newPoint = neighbor (pointAnt ant) direction
-  in  tile (w %! newPoint) /= Water
+  in  isWater $ tile (w %! newPoint)
 
 toOwner :: Int -> Owner
 toOwner 0 = Me
