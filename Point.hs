@@ -30,12 +30,8 @@ instance Show Direction where
   show South = "S"
   show West  = "W"
 
-
 directions :: Neighbors Direction
 directions = Neighbors (North,East,South,West)
-
-
-
 
 newtype Neighbors a = Neighbors (a,a,a,a)
 instance Functor Neighbors where
@@ -58,11 +54,8 @@ instance T.Traversable Neighbors where
   where combine [w,x,y,z] = Neighbors (w,x,y,z)
         combine _ = undefined
 
-
-
 neighbors :: Point -> Neighbors Point
 neighbors p = fmap (neighbor p) directions
-
 
 maxDirectionValue :: Ord a => Neighbors a -> (Direction, a)
 maxDirectionValue n =

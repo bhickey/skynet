@@ -16,7 +16,7 @@ tryOrder _ [] = Nothing
 tryOrder _ o = Just $ head o
 
 generateOrders :: World -> DiffusionGrid -> Ant -> Maybe Order
-generateOrders w d a@(Ant p _) = tryOrder w $ map (\ dir -> Order a dir) (bestScore d p)
+generateOrders w d a@(Ant p _) = tryOrder w $ map (\ dir -> Order a dir) (maxDirection d p)
 
 {- |
  - Implement this function to create orders.

@@ -10,6 +10,8 @@ import Data.Array.ST
 import qualified Data.Foldable as F
 import qualified Data.Traversable as T
 
+import qualified Data.List as L
+
 import Point
 import Ants
 
@@ -56,8 +58,7 @@ tileToEnum WaterTile       = waterAutomata
 tileToEnum (LandTile item) = itemToEnum item
 tileToEnum UnknownTile     = emptyAutomata
 
-
--- a pair of automata, the first is fresh, the second stale
+type DiffusionGrid = Array Point World
 type Rule a = a -> Neighbors a -> a
 
 testRule :: Rule Automata
@@ -88,10 +89,8 @@ applyRule rule grid dest = do
                    writeArray dest i (rule v ns))
 
 
-{-
 bestScore :: Array Point Automata -> Point -> [(Int, Direction)]
-bestScore g p = sort $ zipWith (\ a d -> ((.) foodProb (g !) a, d)) (neighbors p) directions
--}
+bestScore g p = L.sort $ zipWith (\ a d -> ((.) foodProb (g !) a, d)) (neighbors p) directions
 
 --Look at the strictness of this
 diffuse :: Array Point Tile -> Int -> Array Point Automata
