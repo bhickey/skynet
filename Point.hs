@@ -1,8 +1,10 @@
 module Point(
  Point(row,col),
  Direction(..),
+ Neighbors,
  directions,
  neighbor,
+ neighbors,
  point,
  viewCircle,
  distance,
@@ -11,6 +13,8 @@ module Point(
 ) where
 
 import Data.Ix
+import qualified Data.Foldable as F
+import qualified Data.Traversable as T
 import Control.Applicative
 import GameParams
 
@@ -22,8 +26,35 @@ instance Show Direction where
   show South = "S"
   show West  = "W"
 
-directions :: [Direction]
-directions = [North .. West]
+
+directions :: Neighbors Direction
+directions = Neighbors (North,East,South,West)
+
+newtype Neighbors a = Neighbors (a,a,a,a)
+instance Functor Neighbors where
+ fmap f (Neighbors (a,b,c,d)) = Neighbors (f a,f b,f c,f d)
+
+instance Applicative Neighbors where
+ pure a = Neighbors (a, a, a, a)
+ Neighbors (fa,fb,fc,fd) <*> Neighbors (a,b,c,d) =
+   Neighbors (fa a, fb b, fc c, fd d)
+ _ *> a = a
+ a <* _ = a
+
+instance F.Foldable Neighbors where
+ foldr f base (Neighbors (a,b,c,d)) =
+  F.foldr f base [a,b,c,d]
+
+instance T.Traversable Neighbors where
+ traverse f (Neighbors (a,b,c,d)) =
+  pure combine <*> T.traverse f [a,b,c,d]
+  where combine [w,x,y,z] = Neighbors (w,x,y,z)
+        combine _ = undefined
+
+
+neighbors :: Point -> Neighbors Point
+neighbors p = fmap (neighbor p) directions
+
 
 type Row = Int
 type Col = Int

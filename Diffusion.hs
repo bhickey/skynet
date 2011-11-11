@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Diffusion where
           
 import Control.Monad
@@ -6,7 +7,8 @@ import Data.Array
 import Data.Array.MArray
 import Data.Array.ST
 
-import Data.List as L
+import qualified Data.Foldable as F
+import qualified Data.Traversable as T
 
 import Point
 import Ants
@@ -54,31 +56,49 @@ tileToEnum WaterTile       = waterAutomata
 tileToEnum (LandTile item) = itemToEnum item
 tileToEnum UnknownTile     = emptyAutomata
 
-toAutomataPair :: Tile -> AutomataPair
-toAutomataPair t = let t' = tileToEnum t in (t',t')
 
 -- a pair of automata, the first is fresh, the second stale
-type AutomataPair = (Automata, Automata)
-type Rule = AutomataPair -> [AutomataPair] -> AutomataPair
+type Rule a = a -> Neighbors a -> a
 
-rule :: Rule
-rule w@(_,WaterAutomata) _ = w
-rule (x, Automata a _ fD _ _) tiles = 
+testRule :: Rule Automata
+testRule WaterAutomata _ = WaterAutomata
+testRule (Automata a _ fD _ _) tiles =
   let penalty = if a == 0 then 1 else 5
-      fD' = foldl (\ f n -> max f ((.) foodProb snd n - penalty)) fD tiles in
-    (Automata 0 0 fD' 0.0 0.0, x)
+      fD' = F.foldl (\ f n -> max f (foodProb n - penalty)) fD tiles in
+    Automata 0 0 fD' 0.0 0.0
 
-applyRules g = mapM (applyRule g rule) (indices g)
+{-
+applyRules :: MArray Array Automata m => Array Point Automata -> m [Array Point Automata]
+applyRules g = mapM (applyRule g testRule) (indices g)
 
+applyRule :: MArray a e m => a Point e -> (e -> [e] -> e) -> Point -> m (a Point e)
 applyRule grid r p = do
     t <- readArray grid p
     n <- mapM (readArray grid) (neighbors p)
     writeArray grid p (r t n)
     return grid
+-}
 
-bestScore g p = sort $ zipWith (\ a d -> ((.) foodProb (g !) a, d)) (neighbors p) directions
+applyRule :: MArray a e m => (Rule e) -> a Point e -> a Point e -> m ()
+applyRule rule grid dest = do
+  b <- getBounds grid
+  forM_ (range b)
+        (\ i -> do v <- readArray grid i
+                   ns <- T.mapM (readArray grid) (neighbors i)
+                   writeArray dest i (rule v ns))
+
 
 {-
+bestScore :: Array Point Automata -> Point -> [(Int, Direction)]
+bestScore g p = sort $ zipWith (\ a d -> ((.) foodProb (g !) a, d)) (neighbors p) directions
+-}
+
+--Look at the strictness of this
+diffuse :: Array Point Tile -> Int -> Array Point Automata
 diffuse iw steps = runSTArray $ do
-    dg <- newListArray (bounds iw) (map toAutomataPair (elems iw))
-    (replicateM_ steps (applyRules dg)) >> return dg -}
+  grid1 <- (thaw iw >>= mapArray tileToEnum) :: ST s (STArray s Point Automata)
+  grid2 <- (getBounds grid1) >>= newArray_
+  applyRules grid1 grid2 steps
+  where
+    applyRules g1 _  0 = return g1
+    applyRules g1 g2 n = applyRule testRule g1 g2 >> applyRules g2 g1 (n-1)

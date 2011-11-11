@@ -153,14 +153,6 @@ renderWorld w = concatMap renderAssoc (assocs w)
       | col (fst a) == maxColumn = [renderMetaTile (snd a)] ++ "\n"
       | otherwise = [renderMetaTile (snd a)]
 
-neighbors :: Point -> [Point]
-neighbors p =
-    let n = neighbor p in
-        [(n East)
-        ,(n West)
-        ,(n South)
-        ,(n North)
-        ]
 
 
 
