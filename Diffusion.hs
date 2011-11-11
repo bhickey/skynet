@@ -1,13 +1,15 @@
 module Diffusion where
-                  
-import Data.Array.Diff
+          
+import Control.Monad
+import Control.Monad.ST
+import Data.Array
+import Data.Array.MArray
+import Data.Array.ST
+
 import Data.List as L
 
 import Point
 import Ants
-
-aimap :: (Ix i) => (Array i e) -> (i -> e -> c) -> (Array i c)
-aimap a f = listArray (bounds a) $ fmap (uncurry f) (assocs a)
 
 data Automata = WaterAutomata |
                 Automata Int Int Int Float Float deriving (Show)
@@ -32,7 +34,6 @@ enemyHill :: Automata -> Float
 enemyHill WaterAutomata = 0
 enemyHill (Automata _ _ _ _ eh) = eh
 
-
 emptyAutomata :: Automata
 emptyAutomata = Automata 0 0 0 0.0 0.0
 
@@ -53,28 +54,31 @@ tileToEnum WaterTile       = waterAutomata
 tileToEnum (LandTile item) = itemToEnum item
 tileToEnum UnknownTile     = emptyAutomata
 
-type DiffusionGrid = Array Point Automata
-type Rule = (Automata -> [Automata] -> Automata)
+toAutomataPair :: Tile -> AutomataPair
+toAutomataPair t = let t' = tileToEnum t in (t',t')
+
+-- a pair of automata, the first is fresh, the second stale
+type AutomataPair = (Automata, Automata)
+type Rule = AutomataPair -> [AutomataPair] -> AutomataPair
 
 rule :: Rule
-rule WaterAutomata _ = waterAutomata
-rule (Automata a _ fD _ _) tiles =
-  let penalty = if a > 0 then 4 else 1
-      fD' = max fD (max 0 ((foldl1 max $ map foodProb tiles) - penalty)) in
-    Automata 0 0 fD' 0.0 0.0
+rule w@(_,WaterAutomata) _ = w
+rule (x, Automata a _ fD _ _) tiles = 
+  let penalty = if a == 0 then 1 else 5
+      fD' = foldl (\ f n -> max f ((.) foodProb snd n - penalty)) fD tiles in
+    (Automata 0 0 fD' 0.0 0.0, x)
 
-diffusionGrid :: ImputedWorld -> DiffusionGrid
-diffusionGrid w = amap tileToEnum w
+applyRules g = mapM (applyRule g rule) (indices g)
 
-applyRules :: DiffusionGrid -> Rule -> Point -> Automata -> Automata
-applyRules grid r i e =
-  let n = (map (grid !) (neighbors i)) in
-   (r e n)
+applyRule grid r p = do
+    t <- readArray grid p
+    n <- mapM (readArray grid) (neighbors p)
+    writeArray grid p (r t n)
+    return grid
 
-bestScore :: DiffusionGrid -> Point -> [Direction]
-bestScore dg p =
-    let points = zip (map foodProb (map (dg !) (map (neighbor p) directions))) directions in
-      (map snd $ L.sortBy (\ (a,_) (b,_) -> compare a b) points)
-   
-diffuse :: Rule -> DiffusionGrid -> DiffusionGrid
-diffuse r dg = aimap dg (applyRules dg r)
+bestScore g p = sort $ zipWith (\ a d -> ((.) foodProb (g !) a, d)) (neighbors p) directions
+
+{-
+diffuse iw steps = runSTArray $ do
+    dg <- newListArray (bounds iw) (map toAutomataPair (elems iw))
+    (replicateM_ steps (applyRules dg)) >> return dg -}
