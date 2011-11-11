@@ -8,6 +8,10 @@ module Point(
  point,
  viewCircle,
  distance,
+ maxDirectionValue,
+ minDirectionValue,
+ maxDirection,
+ minDirection,
  
 
 ) where
@@ -29,6 +33,9 @@ instance Show Direction where
 
 directions :: Neighbors Direction
 directions = Neighbors (North,East,South,West)
+
+
+
 
 newtype Neighbors a = Neighbors (a,a,a,a)
 instance Functor Neighbors where
@@ -52,9 +59,24 @@ instance T.Traversable Neighbors where
         combine _ = undefined
 
 
+
 neighbors :: Point -> Neighbors Point
 neighbors p = fmap (neighbor p) directions
 
+
+maxDirectionValue :: Ord a => Neighbors a -> (Direction, a)
+maxDirectionValue n =
+ F.maximumBy compareSnd $ pure (,) <*> directions <*> n
+ where compareSnd (_,a) (_,b) = compare a b
+minDirectionValue :: Ord a => Neighbors a -> (Direction, a)
+minDirectionValue n =
+ F.minimumBy compareSnd $ pure (,) <*> directions <*> n
+ where compareSnd (_,a) (_,b) = compare a b
+
+maxDirection :: Ord a => Neighbors a -> Direction
+maxDirection = fst.maxDirectionValue
+minDirection :: Ord a => Neighbors a -> Direction
+minDirection = fst.minDirectionValue
 
 type Row = Int
 type Col = Int
