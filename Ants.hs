@@ -15,10 +15,6 @@ module Ants
   , GameParams (..)
   , Visibility (..)
 
-    -- Coordinates
-  , Point
-  , (%!)
-
     -- Tile Functions
   , isLiveAnt
   , isDeadAnt
@@ -110,19 +106,21 @@ renderItem (HillItem _) = 'x'
 renderItem BlankItem = 'l'
 renderItem FoodItem = 'f'
 
+renderTile :: Tile -> Char
+renderTile (LandTile item) = renderItem item
+renderTile WaterTile = 'w'
+renderTile UnknownTile = '*'
 
-renderMetaTile :: MetaTile -> String
+renderMetaTile :: MetaTile -> Char
 renderMetaTile (MetaTile t v) =
-  upper $ case t of
-    LandTile item -> renderItem item
-    WaterTile -> 'w'
-    UnknownTile -> '*'
+  upper $ renderTile t
   where
-    upper :: Char -> String
-    upper c =
+    upper :: Char -> Char
+    upper =
       case v of
-        Observed -> [toUpper c]
-        _ -> [c]
+        Observed -> toUpper
+        Unobserved -> id
+        Predicted -> id
 
 
 -- | Sets the tile to visible, if the tile is still unknown then it is land.
@@ -145,10 +143,6 @@ colBound :: World -> Int
 colBound = col.snd.bounds
 
 
--- | Accesses World using the modulus of the point
-(%!) :: World -> Point -> MetaTile
-(%!) w p = w ! p
-
 -- | For debugging
 renderWorld :: World -> String
 renderWorld w = concatMap renderAssoc (assocs w)
@@ -156,8 +150,8 @@ renderWorld w = concatMap renderAssoc (assocs w)
     maxColumn = colBound w
     renderAssoc :: (Point, MetaTile) -> String
     renderAssoc a
-      | col (fst a) == maxColumn = renderMetaTile (snd a) ++ "\n"
-      | otherwise = renderMetaTile (snd a)
+      | col (fst a) == maxColumn = [renderMetaTile (snd a)] ++ "\n"
+      | otherwise = [renderMetaTile (snd a)]
 
 neighbors :: Point -> [Point]
 neighbors p =
@@ -216,7 +210,7 @@ data Order = Order Ant Direction deriving (Show)
 passable :: World -> Order -> Bool
 passable w (Order ant direction) =
   let newPoint = neighbor (pointAnt ant) direction
-  in  isWater $ tile (w %! newPoint)
+  in  isWater $ tile (w ! newPoint)
 
 toOwner :: Int -> Owner
 toOwner 0 = Me
