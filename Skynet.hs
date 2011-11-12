@@ -1,6 +1,5 @@
 module Main where
 
-import Data.Array
 import Data.Maybe (mapMaybe)
 import Control.Monad.Reader.Class
 
@@ -9,7 +8,6 @@ import BotMonad
 import GameRunner
 
 import Diffusion
-import Point
 
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
