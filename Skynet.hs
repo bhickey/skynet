@@ -18,7 +18,7 @@ tryOrder _ [] = Nothing
 tryOrder _ o = Just $ head o
 
 generateOrders :: DiffusionGrid -> Ant -> Maybe Order
-generateOrders d a@(Ant p _) = Just $ Order a (maxDirection (fmap (d !) (neighbors p)))
+generateOrders d a@(Ant p _) = Just $ Order a (diffusionScore d p)
 
 {- |
  - Implement this function to create orders.
@@ -32,7 +32,7 @@ generateOrders d a@(Ant p _) = Just $ Order a (maxDirection (fmap (d !) (neighbo
 doTurn :: GameParams -> BotMonad [Order]
 doTurn _ = do
   gs <- ask
-  let grid = diffuse (impute (world gs)) 15
+  let grid = diffuse (impute (world gs)) 20
       orders = mapMaybe (generateOrders grid) $ myAnts $ ants gs in
     return orders
 
