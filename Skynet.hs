@@ -1,5 +1,6 @@
 module Main where
 
+import Data.Array
 import Data.Maybe (mapMaybe)
 import Control.Monad.Reader.Class
 
@@ -8,6 +9,7 @@ import BotMonad
 import GameRunner
 
 import Diffusion
+import Point
 
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
@@ -15,8 +17,8 @@ tryOrder :: World -> [Order] -> Maybe Order
 tryOrder _ [] = Nothing
 tryOrder _ o = Just $ head o
 
-generateOrders :: World -> DiffusionGrid -> Ant -> Maybe Order
-generateOrders w d a@(Ant p _) = tryOrder w $ map (\ dir -> Order a dir) (maxDirection d p)
+generateOrders :: DiffusionGrid -> Ant -> Maybe Order
+generateOrders d a@(Ant p _) = Just $ Order a (maxDirection (fmap (d !) (neighbors p)))
 
 {- |
  - Implement this function to create orders.
@@ -30,8 +32,8 @@ generateOrders w d a@(Ant p _) = tryOrder w $ map (\ dir -> Order a dir) (maxDir
 doTurn :: GameParams -> BotMonad [Order]
 doTurn _ = do
   gs <- ask
-  let grid = (iterate (diffuse rule) $ diffusionGrid $ impute (world gs)) !! 10
-      orders = mapMaybe (generateOrders (world gs) grid) $ myAnts $ ants gs in
+  let grid = diffuse (impute (world gs)) 15
+      orders = mapMaybe (generateOrders grid) $ myAnts $ ants gs in
     return orders
 
 

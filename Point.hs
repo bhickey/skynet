@@ -88,7 +88,6 @@ instance Ix Point where
   inRange (Point ra ca _ _, Point rb cb _ _) (Point rp cp _ _) =
     (ra <= rp && rp <= rb) && (ca <= cp && cp <= cb)
 
-
 point :: GameParams -> Int -> Int -> Point
 point gp r c = Point (r `mod` mR) (c `mod` mC) mR mC
  where
@@ -101,8 +100,6 @@ neighbor (Point r c mR mC) East = (Point r ((c + 1) `mod` mC) mR mC)
 neighbor (Point r c mR mC) South = (Point ((r - 1 + mR) `mod` mR) c mR mC)
 neighbor (Point r c mR mC) West = (Point r ((c - 1 + mC) `mod` mC) mR mC)
     
-
-
 deltaPoint :: Int -> Int -> Point -> Point
 deltaPoint x y (Point r c mr mc) =
  Point ((x + r) `mod` mr) ((y + c) `mod` mc) mr mc
@@ -126,12 +123,9 @@ distance (Point r1 c1 mr1 mc1) (Point r2 c2 _mr2 _mc2) =
       cold = modDistance mc1 c1 c2
   in rowd + cold
 
-
-
 -- | Computes the square of the two norm.
 twoNormSquared :: (Row, Col) -> Int
 twoNormSquared (r,c) = r ^ (2::Int) + c ^ (2::Int)
-
 
 getPointCircle :: Int -- radius squared
                -> Point -> [Point]
@@ -142,4 +136,3 @@ getPointCircle r2 p =
 
 viewCircle :: GameParams -> Point -> [Point]
 viewCircle gp p = getPointCircle (viewradius2 gp) p
-

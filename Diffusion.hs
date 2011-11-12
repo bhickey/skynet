@@ -10,13 +10,18 @@ import Data.Array.ST
 import qualified Data.Foldable as F
 import qualified Data.Traversable as T
 
-import qualified Data.List as L
-
 import Point
 import Ants
 
+type DiffusionGrid = Array Point Automata
+
 data Automata = WaterAutomata |
-                Automata Int Int Int Float Float deriving (Show)
+                Automata Int Int Int Float Float deriving (Show, Eq)
+
+instance Ord Automata where
+  compare WaterAutomata x = LT
+  compare x WaterAutomata = GT
+  compare (Automata _ _ fa _ _) (Automata _ _ fb _ _) = compare fa fb
 
 friendlyAnt :: Automata -> Int
 friendlyAnt WaterAutomata = 0
@@ -58,7 +63,6 @@ tileToEnum WaterTile       = waterAutomata
 tileToEnum (LandTile item) = itemToEnum item
 tileToEnum UnknownTile     = emptyAutomata
 
-type DiffusionGrid = Array Point World
 type Rule a = a -> Neighbors a -> a
 
 testRule :: Rule Automata
@@ -88,12 +92,8 @@ applyRule rule grid dest = do
                    ns <- T.mapM (readArray grid) (neighbors i)
                    writeArray dest i (rule v ns))
 
-
-bestScore :: Array Point Automata -> Point -> [(Int, Direction)]
-bestScore g p = L.sort $ zipWith (\ a d -> ((.) foodProb (g !) a, d)) (neighbors p) directions
-
 --Look at the strictness of this
-diffuse :: Array Point Tile -> Int -> Array Point Automata
+diffuse :: ImputedWorld -> Int -> DiffusionGrid
 diffuse iw steps = runSTArray $ do
   grid1 <- (thaw iw >>= mapArray tileToEnum) :: ST s (STArray s Point Automata)
   grid2 <- (getBounds grid1) >>= newArray_
@@ -101,3 +101,7 @@ diffuse iw steps = runSTArray $ do
   where
     applyRules g1 _  0 = return g1
     applyRules g1 g2 n = applyRule testRule g1 g2 >> applyRules g2 g1 (n-1)
+
+diffusionScore :: Array Point Automata -> Point -> Direction
+diffusionScore dg p = maxDirection $ fmap (dg !) (neighbors p)
+ 
