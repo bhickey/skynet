@@ -19,8 +19,8 @@ data Automata = WaterAutomata |
                 Automata Int Int Int Float Float deriving (Show, Eq)
 
 instance Ord Automata where
-  compare WaterAutomata x = LT
-  compare x WaterAutomata = GT
+  compare WaterAutomata _ = LT
+  compare _ WaterAutomata = GT
   compare (Automata _ _ fa _ _) (Automata _ _ fb _ _) = compare fa fb
 
 friendlyAnt :: Automata -> Int
