@@ -16,12 +16,24 @@ import Ants
 type DiffusionGrid = Array Point Automata
 
 data Automata = WaterAutomata |
-                Automata Int Int Int Float Float deriving (Show, Eq)
+                Automata Int Int Int Float Float deriving (Eq)
 
 instance Ord Automata where
   compare WaterAutomata _ = LT
   compare _ WaterAutomata = GT
   compare (Automata _ _ fa _ _) (Automata _ _ fb _ _) = compare fa fb
+
+instance Show Automata where
+  show WaterAutomata = "~"
+  show (Automata _ _ f _ _) =
+    if f == 100 then "F"
+                else if f > 95
+                then "f"
+                else if f > 85
+                     then "o"
+                     else if f > 75
+                          then "."
+                          else " "
 
 friendlyAnt :: Automata -> Int
 friendlyAnt WaterAutomata = 0
@@ -92,4 +104,3 @@ diffuse iw steps = runSTArray $ do
 
 diffusionScore :: Array Point Automata -> Point -> Direction
 diffusionScore dg p = maxDirection $ fmap (dg !) (neighbors p)
- 

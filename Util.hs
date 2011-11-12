@@ -2,7 +2,6 @@ module Util
   ( fAnd
   , fOr
   , tuplify2
-  , dump
   , output
   , if'
   ) where
@@ -24,8 +23,5 @@ if' :: Bool -> a -> a -> a
 if' True x _ = x
 if' False _ y = y
 
-dump :: Show a => a -> a 
-dump a = output a a
-
-output :: Show a => a -> b -> b
-output a = seq (unsafePerformIO $ hPutStrLn stderr $ show a)
+output :: String -> b -> b
+output a = seq (unsafePerformIO $ hPutStrLn stderr a)

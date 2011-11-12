@@ -12,8 +12,8 @@ module Point(
  minDirectionValue,
  maxDirection,
  minDirection,
- 
 
+ showGrid
 ) where
 
 import Data.Ix
@@ -21,6 +21,8 @@ import qualified Data.Foldable as F
 import qualified Data.Traversable as T
 import Control.Applicative
 import GameParams
+
+import Data.Array
 
 data Direction = North | East | South | West deriving (Bounded, Eq, Enum, Ord)
 
@@ -136,3 +138,10 @@ getPointCircle r2 p =
 
 viewCircle :: GameParams -> Point -> [Point]
 viewCircle gp p = getPointCircle (viewradius2 gp) p
+
+--
+showGrid :: (Show a) => Array Point a -> String
+showGrid g = 
+  let (Point r0 c0 mr mc, Point r1 c1 _ _) = bounds g
+      points = [[show $ g ! (Point r c mr mc) | c <- [c0..c1]] | r <- [r0..r1]] in
+    unlines $ map unwords points

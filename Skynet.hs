@@ -6,8 +6,9 @@ import Control.Monad.Reader.Class
 import Ants
 import BotMonad
 import GameRunner
-
 import Diffusion
+import Point
+import Util
 
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
@@ -32,7 +33,7 @@ doTurn _ = do
   gs <- ask
   let grid = diffuse (impute (world gs)) 20
       orders = mapMaybe (generateOrders grid) $ myAnts $ ants gs in
-    return orders
+    return $ output (showGrid grid) orders
 
 
 -- | This runs the game
