@@ -1,0 +1,2 @@
+#!/bin/bash
+ghc --make -O3 -fforce-recomp -Wall -Werror Skynet || exit 1

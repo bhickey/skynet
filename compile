@@ -1,0 +1,2 @@
+#!/bin/bash
+ghc --make -O3 -Wall -Werror Skynet || exit 1

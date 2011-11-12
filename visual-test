@@ -1,0 +1,9 @@
+#!/bin/bash
+./compile || exit 1
+cd tools
+./playgame.py \
+ -m maps/example/tutorial1.map \
+ ../Skynet \
+ ../Skynet \
+ --verbose --log_dir game_logs
+
