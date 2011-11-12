@@ -72,18 +72,6 @@ testRule (Automata a _ fD _ _) tiles =
       fD' = F.foldl (\ f n -> max f (foodProb n - penalty)) fD tiles in
     Automata 0 0 fD' 0.0 0.0
 
-{-
-applyRules :: MArray Array Automata m => Array Point Automata -> m [Array Point Automata]
-applyRules g = mapM (applyRule g testRule) (indices g)
-
-applyRule :: MArray a e m => a Point e -> (e -> [e] -> e) -> Point -> m (a Point e)
-applyRule grid r p = do
-    t <- readArray grid p
-    n <- mapM (readArray grid) (neighbors p)
-    writeArray grid p (r t n)
-    return grid
--}
-
 applyRule :: MArray a e m => (Rule e) -> a Point e -> a Point e -> m ()
 applyRule rule grid dest = do
   b <- getBounds grid
