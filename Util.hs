@@ -6,7 +6,6 @@ module Util
   , if'
   ) where
 
-import System.IO
 import System.IO.Unsafe
  
 fAnd :: a -> [a -> Bool] -> Bool
@@ -24,4 +23,4 @@ if' True x _ = x
 if' False _ y = y
 
 output :: String -> b -> b
-output a = seq (unsafePerformIO $ hPutStrLn stderr a)
+output a = seq (unsafePerformIO $ appendFile "dump.out" ("TURN\n" ++ a))
