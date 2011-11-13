@@ -13,6 +13,10 @@ import qualified Data.Traversable as T
 import Point
 import Ants
 
+brightness :: [Char]
+brightness =  " .`-_':,;^=+/\"|)\\<>)iv%xclrs{*}I?!][1taeo7zjLu" ++ 
+              "nTJCwfy325Fp6mqSghVd4EgXPGZbYkOA&8U$@KHDBWNMR0Q";
+
 type DiffusionGrid = Array Point Automata
 
 data Automata = WaterAutomata |
@@ -24,16 +28,11 @@ instance Ord Automata where
   compare (Automata _ _ fa _ _) (Automata _ _ fb _ _) = compare fa fb
 
 instance Show Automata where
-  show WaterAutomata = "~"
-  show (Automata _ _ f _ _) =
-    if f == 100 then "F"
-                else if f > 95
-                then "f"
-                else if f > 85
-                     then "o"
-                     else if f > 75
-                          then "."
-                          else " "
+  show WaterAutomata = "#"
+  show (Automata _ _ f _ _) = 
+    if f > 100 - (length brightness) 
+    then [brightness !! (length brightness - f)]
+    else " "
 
 friendlyAnt :: Automata -> Int
 friendlyAnt WaterAutomata = 0
@@ -103,4 +102,4 @@ diffuse iw steps = runSTArray $ do
     applyRules g1 g2 n = applyRule testRule g1 g2 >> applyRules g2 g1 (n-1)
 
 diffusionScore :: Array Point Automata -> Point -> Direction
-diffusionScore dg p = maxDirection $ fmap (dg !) (neighbors p)
+diffusionScore dg p = minDirection $ fmap (dg !) (neighbors p)
