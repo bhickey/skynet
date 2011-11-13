@@ -35,7 +35,8 @@ module Ants
   , neighbors
   
     -- Debugging
-  , renderWorld
+  --, renderWorld
+  ,renderMetaTile
 
   ) where
 
@@ -139,7 +140,7 @@ type ImputedWorld = Array Point Tile
 impute :: World -> ImputedWorld
 impute w = IA.amap tile w
 
-
+{-
 colBound :: World -> Int
 colBound = col.snd.bounds
 
@@ -153,6 +154,7 @@ renderWorld w = concatMap renderAssoc (assocs w)
     renderAssoc a
       | col (fst a) == maxColumn = [renderMetaTile (snd a)] ++ "\n"
       | otherwise = [renderMetaTile (snd a)]
+-}
 
 
 
@@ -211,9 +213,9 @@ data Order = Order Ant Direction deriving (Show)
 instance NFData Order where
  rnf (Order a d) = rnf a `seq` rnf d `seq` ()
 
-passable :: World -> Order -> Bool
-passable w (Order ant direction) =
-  let newPoint = neighbor (pointAnt ant) direction
+passable :: GameParams -> World -> Order -> Bool
+passable gp w (Order ant direction) =
+  let newPoint = neighbor gp (pointAnt ant) direction
   in  isWater $ tile (w ! newPoint)
 
 toOwner :: Int -> Owner

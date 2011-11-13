@@ -1,5 +1,7 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Point(
- Point(row,col),
+ Point(),
+ row,col,
  Direction(..),
  Neighbors,
  directions,
@@ -13,7 +15,6 @@ module Point(
  maxDirection,
  minDirection,
 
- showGrid
 ) where
 
 import Data.Ix
@@ -23,7 +24,6 @@ import Control.Applicative
 import GameParams
 import Control.DeepSeq
 
-import Data.Array
 
 data Direction = North | East | South | West deriving (Bounded, Eq, Enum, Ord)
 
@@ -63,8 +63,8 @@ instance T.Traversable Neighbors where
   where combine [w,x,y,z] = Neighbors w x y z
         combine _ = undefined
 
-neighbors :: Point -> Neighbors Point
-neighbors p = fmap (neighbor p) directions
+neighbors :: GameParams -> Point -> Neighbors Point
+neighbors gp p = fmap (neighbor gp p) directions
 
 maxDirectionValue :: Ord a => Neighbors a -> (Direction, a)
 maxDirectionValue n =
@@ -80,42 +80,31 @@ maxDirection = fst.maxDirectionValue
 minDirection :: Ord a => Neighbors a -> Direction
 minDirection = fst.minDirectionValue
 
-type Row = Int
-type Col = Int
-data Point = Point
-  { row :: !Row
-  , col :: !Col
-  , _maxRow :: !Row
-  , _maxCol :: !Col
-  } deriving (Show, Eq, Ord)
+newtype Point = Point Int deriving (Show, Eq, Ord, NFData, Ix)
 
-instance NFData Point where
-  rnf (Point r c mr mc) =
-   rnf r `seq` rnf c `seq` rnf mr `seq` rnf mc `seq` ()
-
--- We should probably be checking these values
-instance Ix Point where
-  range (Point ra ca mra mca, Point rb cb _mrb _mcb) = [Point r c mra mca | r <- [ra..rb], c <- [ca..cb]]
-  index (Point ra ca _ _, Point _ cb _ _) (Point rp cp _ _) =
-    (rp - ra) * (cb - ca) + (cp - ca)
-  inRange (Point ra ca _ _, Point rb cb _ _) (Point rp cp _ _) =
-    (ra <= rp && rp <= rb) && (ca <= cp && cp <= cb)
+row :: GameParams -> Point -> Int
+row gp (Point s) = s `div` (cols gp)
+col :: GameParams -> Point -> Int
+col gp (Point s) = s `mod` (cols gp)
 
 point :: GameParams -> Int -> Int -> Point
-point gp r c = Point (r `mod` mR) (c `mod` mC) mR mC
+point gp r c = Point $ (r `mod` mR) * mC + (c `mod` mC)
  where
   mR = rows gp
   mC = cols gp
 
-neighbor :: Point -> Direction -> Point
-neighbor (Point r c mR mC) North = (Point ((r + 1) `mod` mR) c mR mC)
-neighbor (Point r c mR mC) East = (Point r ((c + 1) `mod` mC) mR mC)
-neighbor (Point r c mR mC) South = (Point ((r - 1 + mR) `mod` mR) c mR mC)
-neighbor (Point r c mR mC) West = (Point r ((c - 1 + mC) `mod` mC) mR mC)
+neighbor :: GameParams -> Point -> Direction -> Point
+neighbor gp p North = deltaPoint gp 0 1 p
+neighbor gp p East = deltaPoint gp 1 0 p
+neighbor gp p South = deltaPoint gp 0 (-1) p
+neighbor gp p West = deltaPoint gp (-1) 0 p
     
-deltaPoint :: Int -> Int -> Point -> Point
-deltaPoint x y (Point r c mr mc) =
- Point ((x + r) `mod` mr) ((y + c) `mod` mc) mr mc
+deltaPoint :: GameParams -> Int -> Int -> Point -> Point
+deltaPoint gp x y (Point s) =
+ Point $ (s + (x * mc) + y) `mod` (mr * mc)
+ where
+  mr = rows gp
+  mc = cols gp
 
 --------------------------------------------------------------------------------
 -- Norms and Metrics -----------------------------------------------------------
@@ -130,29 +119,35 @@ modDistance m x y =
 
 
 -- | Computes manhattan distance.
-distance :: Point -> Point -> Int
-distance (Point r1 c1 mr1 mc1) (Point r2 c2 _mr2 _mc2) =
-  let rowd = modDistance mr1 r1 r2
-      cold = modDistance mc1 c1 c2
+distance :: GameParams -> Point -> Point -> Int
+distance gp p1 p2 =
+  let rowd = modDistance r (row gp p1) (row gp p2)
+      cold = modDistance c (col gp p1) (col gp p2)
   in rowd + cold
+  where
+   r = cols gp 
+   c = cols gp 
+
 
 -- | Computes the square of the two norm.
-twoNormSquared :: (Row, Col) -> Int
+twoNormSquared :: (Int, Int) -> Int
 twoNormSquared (r,c) = r ^ (2::Int) + c ^ (2::Int)
 
-getPointCircle :: Int -- radius squared
+getPointCircle :: GameParams -> Int -- radius squared
                -> Point -> [Point]
-getPointCircle r2 p =
+getPointCircle gp r2 p =
   let rx = truncate.sqrt.(fromIntegral::Int -> Double) $ r2
   in map deltaPoint' $ filter ((<=r2).twoNormSquared) $ (,) <$> [-rx..rx] <*> [-rx..rx]
-  where deltaPoint' (x,y) = deltaPoint x y p 
+  where deltaPoint' (x,y) = deltaPoint gp x y p 
 
 viewCircle :: GameParams -> Point -> [Point]
-viewCircle gp p = getPointCircle (viewradius2 gp) p
+viewCircle gp p = getPointCircle gp (viewradius2 gp) p
 
 --
+{-
 showGrid :: (Show a) => Array Point a -> String
 showGrid g = 
-  let (Point r0 c0 mr mc, Point r1 c1 _ _) = bounds g
-      points = [[show $ g ! (Point r c mr mc) | c <- [c0..c1]] | r <- [r0..r1]] in
+  let (Point s1, Point s2) = bounds g
+      points = [[show $ g ! (Point r c) | c <- [c0..c1]] | r <- [r0..r1]] in
     unlines $ map unwords points
+-}

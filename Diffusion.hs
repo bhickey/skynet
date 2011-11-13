@@ -91,24 +91,24 @@ testRule (Automata a _ fD _ _) tiles =
       fD' = F.foldl (\ f n -> max f (foodProb n - penalty)) fD tiles in
     Automata 0 0 fD' 0.0 0.0
 
-applyRule :: (NFData e, MArray a e m) => (Rule e) -> a Point e -> a Point e -> m ()
-applyRule rule grid dest = do
+applyRule :: (NFData e, MArray a e m) => GameParams -> (Rule e) -> a Point e -> a Point e -> m ()
+applyRule gp rule grid dest = do
   b <- getBounds grid
   forM_ (range b)
         (\ i -> do v <- readArray grid i
-                   ns <- T.mapM (readArray grid) (neighbors i)
+                   ns <- T.mapM (readArray grid) (neighbors gp i)
                    let new = (rule v ns)
                    seq (rnf new) $ writeArray dest i new)
 
 --Look at the strictness of this
-diffuse :: ImputedWorld -> Int -> DiffusionGrid
-diffuse iw steps = runSTArray $ do
+diffuse :: GameParams -> ImputedWorld -> Int -> DiffusionGrid
+diffuse gp iw steps = runSTArray $ do
   grid1 <- (thaw iw >>= mapArray tileToEnum) :: ST s (STArray s Point Automata)
   grid2 <- (getBounds grid1) >>= newArray_
   applyRules grid1 grid2 steps
   where
     applyRules g1 _  0 = return g1
-    applyRules g1 g2 n = applyRule testRule g1 g2 >> applyRules g2 g1 (n-1)
+    applyRules g1 g2 n = applyRule gp testRule g1 g2 >> applyRules g2 g1 (n-1)
 
-diffusionScore :: Array Point Automata -> Point -> Direction
-diffusionScore dg p = minDirection $ fmap (dg !) (neighbors p)
+diffusionScore :: GameParams -> Array Point Automata -> Point -> Direction
+diffusionScore gp dg p = minDirection $ fmap (dg !) (neighbors gp p)

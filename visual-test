@@ -5,7 +5,7 @@ cp ProfSkynet tools
 cd tools
 ./playgame.py \
  -m maps/example/tutorial1.map \
- ../ProfSkynet \
+ ../Skynet \
  ../Skynet \
  --turns 40 \
  --verbose --log_dir game_logs

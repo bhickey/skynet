@@ -1,3 +1,3 @@
 #!/bin/bash
-ghc --make -O3 -fforce-recomp -rtsopts -prof -auto -Wall -Werror Skynet || exit 1
-#ghc --make -O3 -fforce-recomp -rtsopts -Wall -Werror Skynet || exit 1
+#ghc --make -O3 -fforce-recomp -rtsopts -prof -auto -Wall -Werror Skynet || exit 1
+ghc --make -O3 -fforce-recomp -rtsopts -Wall -Werror Skynet || exit 1

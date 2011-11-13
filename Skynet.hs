@@ -8,8 +8,8 @@ import BotMonad
 import GameRunner
 import Diffusion
 import Control.Parallel.Strategies
-import Point
-import Util
+--import Point
+--import Util
 import Logging
 
 
@@ -19,8 +19,8 @@ tryOrder :: World -> [Order] -> Maybe Order
 tryOrder _ [] = Nothing
 tryOrder _ o = Just $ head o
 
-generateOrders :: DiffusionGrid -> Ant -> Maybe Order
-generateOrders d a@(Ant p _) = Just $ Order a (diffusionScore d p)
+generateOrders :: GameParams -> DiffusionGrid -> Ant -> Maybe Order
+generateOrders gp d a@(Ant p _) = Just $ Order a (diffusionScore gp d p)
 
 {- |
  - Implement this function to create orders.
@@ -32,13 +32,13 @@ generateOrders d a@(Ant p _) = Just $ Order a (diffusionScore d p)
  -}
 
 doTurn :: Logger -> GameParams -> BotMonad [Order]
-doTurn logger _ = do
+doTurn logger gp = do
   logString logger "Start Turn"
   gs <- ask
-  let grid = diffuse (impute (world gs)) 20
-      orders = withStrategy rdeepseq $ mapMaybe (generateOrders grid) $ myAnts $ ants gs in
+  let grid = diffuse gp (impute (world gs)) 20
+      orders = withStrategy rdeepseq $ mapMaybe (generateOrders gp grid) $ myAnts $ ants gs in
     do seq orders $ logString logger "End Turn"
-       return $ output (showGrid grid) orders
+       return orders
 
 
 -- | This runs the game

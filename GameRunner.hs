@@ -142,7 +142,7 @@ gameLoop gp doTurn w (line:input)
           gs = foldl' (updateGameState gp) (GameState w [] [] [] time) (fst cs)
       gen <- newStdGen
       orders <- runBotMonad doTurn gs gen
-      mapM_ issueOrder orders
+      mapM_ (issueOrder gp) orders
       finishTurn
       gameLoop gp doTurn (mapWorld clearMetaTile $ world gs) (tail $ snd cs) -- clear world for next turn
   | "end" `isPrefixOf` line = endGame input
@@ -172,10 +172,10 @@ finishTurn = do
   putStrLn "go" 
   hFlush stdout
 
-issueOrder :: Order -> IO ()
-issueOrder (Order ant direction) = do
-  let srow = (show . row . pointAnt) ant
-      scol = (show . col . pointAnt) ant 
+issueOrder :: GameParams -> Order -> IO ()
+issueOrder gp (Order ant direction) = do
+  let srow = (show . row gp . pointAnt) ant
+      scol = (show . col gp . pointAnt) ant 
       sdir = show direction
   putStrLn $ "o " ++ srow ++ " " ++ scol ++ " " ++ sdir
 
