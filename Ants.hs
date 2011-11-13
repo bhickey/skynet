@@ -47,6 +47,7 @@ import Data.Char (toUpper)
 import Data.Time.Clock
 
 import Point
+import Control.DeepSeq
 import GameParams
 
 --------------------------------------------------------------------------------
@@ -63,8 +64,8 @@ data Visibility =
 
 -- | Elements of the world
 data MetaTile = MetaTile
-  { tile :: Tile
-  , visible :: Visibility
+  { tile :: !Tile
+  , visible :: !Visibility
   } deriving (Show)
 
 isLiveAnt, isDeadAnt, isLiveEnemyAnt, isDeadEnemyAnt, isHill, isEnemyHill, isFood, isWater :: Tile -> Bool
@@ -159,12 +160,20 @@ renderWorld w = concatMap renderAssoc (assocs w)
 --------------------------------------------------------------------------------
 -- Ants ------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-data Owner = Me | Enemy Int deriving (Show,Eq)
+data Owner = Me | Enemy !Int deriving (Show,Eq)
+
+instance NFData Owner where
+ rnf Me = ()
+ rnf (Enemy x) = seq x ()
 
 data Ant = Ant
-  { pointAnt :: Point
-  , ownerAnt :: Owner
+  { pointAnt :: !Point
+  , ownerAnt :: !Owner
   } deriving (Show)
+
+instance NFData Ant where
+ rnf (Ant p o) = rnf p `seq` rnf o `seq` ()
+
 
 isMe, isEnemy :: Ant -> Bool
 isMe = (==Me).ownerAnt
@@ -178,8 +187,8 @@ enemyAnts = filter isEnemy
 -- Hills -----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 data Hill = Hill
-  { pointHill :: Point
-  , ownerHill :: Owner
+  { pointHill :: !Point
+  , ownerHill :: !Owner
   } deriving (Show)
 
 {-
@@ -198,6 +207,9 @@ enemyHills = filter isEnemy's
 
 
 data Order = Order Ant Direction deriving (Show)
+
+instance NFData Order where
+ rnf (Order a d) = rnf a `seq` rnf d `seq` ()
 
 passable :: World -> Order -> Bool
 passable w (Order ant direction) =

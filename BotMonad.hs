@@ -22,11 +22,13 @@ import System.IO
 
 
 newtype BotMonad a = BotMonad (ReaderT GameState (RandT StdGen IO) a)
-  deriving (Monad, Functor, MonadRandom)
+  deriving (Monad, Functor, MonadRandom, MonadIO)
 
 instance MonadReader GameState BotMonad where
  ask = BotMonad ask
  local f (BotMonad b) = BotMonad $ local f b
+
+
   
 timeRemaining :: BotMonad NominalDiffTime
 timeRemaining = BotMonad $ do

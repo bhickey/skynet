@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Diffusion where
           
+import Control.DeepSeq
 import Control.Monad
 import Control.Monad.ST
 import Data.Array
@@ -21,6 +22,13 @@ type DiffusionGrid = Array Point Automata
 
 data Automata = WaterAutomata |
                 Automata Int Int Int Float Float deriving (Eq)
+
+instance NFData Automata where
+ rnf WaterAutomata = ()
+ rnf (Automata a b c d e) = 
+  rnf a `seq` rnf b `seq`
+  rnf c `seq` rnf d `seq`
+  rnf e `seq` ()
 
 instance Ord Automata where
   compare WaterAutomata _ = LT
@@ -83,13 +91,14 @@ testRule (Automata a _ fD _ _) tiles =
       fD' = F.foldl (\ f n -> max f (foodProb n - penalty)) fD tiles in
     Automata 0 0 fD' 0.0 0.0
 
-applyRule :: MArray a e m => (Rule e) -> a Point e -> a Point e -> m ()
+applyRule :: (NFData e, MArray a e m) => (Rule e) -> a Point e -> a Point e -> m ()
 applyRule rule grid dest = do
   b <- getBounds grid
   forM_ (range b)
         (\ i -> do v <- readArray grid i
                    ns <- T.mapM (readArray grid) (neighbors i)
-                   writeArray dest i (rule v ns))
+                   let new = (rule v ns)
+                   seq (rnf new) $ writeArray dest i new)
 
 --Look at the strictness of this
 diffuse :: ImputedWorld -> Int -> DiffusionGrid

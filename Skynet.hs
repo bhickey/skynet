@@ -7,6 +7,11 @@ import Ants
 import BotMonad
 import GameRunner
 import Diffusion
+import Control.Parallel.Strategies
+import Point
+import Util
+import Logging
+
 
 -- | Picks the first "passable" order in a list
 -- returns Nothing if no such order exists
@@ -26,14 +31,20 @@ generateOrders d a@(Ant p _) = Just $ Order a (diffusionScore d p)
  - for each see Ants module for more information
  -}
 
-doTurn :: GameParams -> BotMonad [Order]
-doTurn _ = do
+doTurn :: Logger -> GameParams -> BotMonad [Order]
+doTurn logger _ = do
+  logString logger "Start Turn"
   gs <- ask
   let grid = diffuse (impute (world gs)) 20
-      orders = mapMaybe (generateOrders grid) $ myAnts $ ants gs in
-    return $ orders
+      orders = withStrategy rdeepseq $ mapMaybe (generateOrders grid) $ myAnts $ ants gs in
+    do seq orders $ logString logger "End Turn"
+       return $ output (showGrid grid) orders
 
 
 -- | This runs the game
 main :: IO ()
-main = (game doTurn)
+main =
+ do
+  logs <- makeLogDirectory 
+  logger <- makeLogger logs "turn-times"
+  (game (doTurn logger))
