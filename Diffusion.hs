@@ -13,15 +13,11 @@ import qualified Data.Traversable as T
 import Point
 import Ants
 
-<<<<<<< HEAD
 brightness :: [Char]
 brightness =  " .`-_':,;^=+/\"|)\\<>)iv%xclrs{*}I?!][1taeo7zjLu" ++ 
               "nTJCwfy325Fp6mqSghVd4EgXPGZbYkOA&8U$@KHDBWNMR0Q";
 
-type DiffusionGrid = Array Point Automata
-=======
 type DiffusionGrid = V.Vector Automata
->>>>>>> Moved to vector
 
 data Automata = WaterAutomata |
                 Automata Int Int Int Float Float deriving (Eq)
@@ -114,5 +110,5 @@ diffuse gp iw steps =
     applyRules g1 _  0 = return g1
     applyRules g1 g2 n = applyRule gp testRule g1 g2 >> applyRules g2 g1 (n-1)
 
-diffusionScore :: GameParams -> Array Point Automata -> Point -> Direction
-diffusionScore gp dg p = minDirection $ fmap (dg !) (neighbors gp p)
+diffusionScore :: GameParams -> V.Vector Automata -> Point -> Direction
+diffusionScore gp dg p = maxDirection $ fmap (dg V.!) (neighbors gp p)
