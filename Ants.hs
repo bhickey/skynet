@@ -41,8 +41,7 @@ module Ants
   ) where
 
 
-import Data.Array
-import qualified Data.Array.IArray as IA
+import qualified Data.Vector as V
 import Data.Char (toUpper)
 
 import Data.Time.Clock
@@ -134,11 +133,11 @@ visibleMetaTile (MetaTile t _) = MetaTile t Observed
 --------------------------------------------------------------------------------
 -- Immutable World -------------------------------------------------------------
 --------------------------------------------------------------------------------
-type World = Array Point MetaTile
-type ImputedWorld = Array Point Tile
+type World = V.Vector MetaTile
+type ImputedWorld = V.Vector Tile
 
 impute :: World -> ImputedWorld
-impute w = IA.amap tile w
+impute w = V.map tile w
 
 {-
 colBound :: World -> Int
@@ -216,7 +215,7 @@ instance NFData Order where
 passable :: GameParams -> World -> Order -> Bool
 passable gp w (Order ant direction) =
   let newPoint = neighbor gp (pointAnt ant) direction
-  in  isWater $ tile (w ! newPoint)
+  in  isWater $ tile (w V.! newPoint)
 
 toOwner :: Int -> Owner
 toOwner 0 = Me

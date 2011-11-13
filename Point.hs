@@ -17,7 +17,6 @@ module Point(
 
 ) where
 
-import Data.Ix
 import qualified Data.Foldable as F
 import qualified Data.Traversable as T
 import Control.Applicative
@@ -80,15 +79,15 @@ maxDirection = fst.maxDirectionValue
 minDirection :: Ord a => Neighbors a -> Direction
 minDirection = fst.minDirectionValue
 
-newtype Point = Point Int deriving (Show, Eq, Ord, NFData, Ix)
+type Point = Int 
 
 row :: GameParams -> Point -> Int
-row gp (Point s) = s `div` (cols gp)
+row gp s = s `div` (cols gp)
 col :: GameParams -> Point -> Int
-col gp (Point s) = s `mod` (cols gp)
+col gp s = s `mod` (cols gp)
 
 point :: GameParams -> Int -> Int -> Point
-point gp r c = Point $ (r `mod` mR) * mC + (c `mod` mC)
+point gp r c = (r `mod` mR) * mC + (c `mod` mC)
  where
   mR = rows gp
   mC = cols gp
@@ -100,8 +99,8 @@ neighbor gp p South = deltaPoint gp 0 (-1) p
 neighbor gp p West = deltaPoint gp (-1) 0 p
     
 deltaPoint :: GameParams -> Int -> Int -> Point -> Point
-deltaPoint gp x y (Point s) =
- Point $ (s + (x * mc) + y) `mod` (mr * mc)
+deltaPoint gp x y s =
+ (s + (x * mc) + y) `mod` (mr * mc)
  where
   mr = rows gp
   mc = cols gp

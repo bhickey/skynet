@@ -6,11 +6,11 @@ import BotMonad
 import Data.Time
 import Control.Monad.ST
 
-import Data.Array
-import Data.Array.ST
 import Data.List (isPrefixOf, foldl')
 import Data.Char (digitToInt)
 import Data.Maybe
+import qualified Data.Vector as V
+import qualified Data.Vector.Mutable as MV
 
 import System.IO
 
@@ -25,7 +25,7 @@ import Point
 --------------------------------------------------------------------------------
 -- Updating Game ---------------------------------------------------------------
 --------------------------------------------------------------------------------
-type MWorld s = STArray s Point MetaTile
+type MWorld s = MV.MVector s MetaTile
 
 
 -- | Resets tile to land if it is currently occupied by food or ant
@@ -44,8 +44,8 @@ addVisible :: World
            -> Point -- center point
            -> World
 addVisible w gp p = 
-  runSTArray $ do 
-    w' <- unsafeThaw w
+  V.create $ do 
+    w' <- V.unsafeThaw w
     mapM_ (setVisible w') (viewCircle gp p)
     return w'
 
@@ -82,16 +82,16 @@ updateGameState gp gs s
   where
     toPoint :: String -> Point
     toPoint = (uncurry $ point gp) .tuplify2.map read.words
-    writeTile w p t = runSTArray $ do
-      w' <- unsafeThaw w
-      writeArray w' p MetaTile {tile = t, visible = Observed}
+    writeTile w p t = V.create $ do
+      w' <- V.unsafeThaw w
+      MV.write w' p MetaTile {tile = t, visible = Observed}
       return w'
 
 initialWorld :: GameParams -> World
 initialWorld gp = 
   let r = rows gp
       c = cols gp in
-    listArray ((point gp 0 0), (point gp (r - 1) (c - 1))) . repeat $ MetaTile UnknownTile Unobserved
+      V.replicate (r*c) $ MetaTile UnknownTile Unobserved
 
 createParams :: [(String, String)] -> GameParams
 createParams s =
@@ -117,14 +117,8 @@ createParams s =
 
 modifyWorld :: MWorld s -> (MetaTile -> MetaTile) -> Point -> ST s ()
 modifyWorld mw f p = do
-  e' <- readArray mw p
-  e' `seq` writeArray mw p (f e') -- !IMPORTANT! seq is necessary to avoid space leaks
-
-mapWorld :: (MetaTile -> MetaTile) -> World -> World
-mapWorld f w = runSTArray $ do
-  mw <- unsafeThaw w
-  mapM_ (modifyWorld mw f) (indices w)
-  return mw
+  e' <- MV.read mw p
+  e' `seq` MV.write mw p (f e') -- !IMPORTANT! seq is necessary to avoid space leaks
 
 
 
@@ -144,7 +138,7 @@ gameLoop gp doTurn w (line:input)
       orders <- runBotMonad doTurn gs gen
       mapM_ (issueOrder gp) orders
       finishTurn
-      gameLoop gp doTurn (mapWorld clearMetaTile $ world gs) (tail $ snd cs) -- clear world for next turn
+      gameLoop gp doTurn (V.map clearMetaTile $ world gs) (tail $ snd cs) -- clear world for next turn
   | "end" `isPrefixOf` line = endGame input
   | otherwise = gameLoop gp doTurn w input
 gameLoop _ _ _ [] = endGame []

@@ -35,7 +35,7 @@ doTurn :: Logger -> GameParams -> BotMonad [Order]
 doTurn logger gp = do
   logString logger "Start Turn"
   gs <- ask
-  let grid = diffuse gp (impute (world gs)) 20
+  let grid = diffuse gp (impute (world gs)) 40
       orders = withStrategy rdeepseq $ mapMaybe (generateOrders gp grid) $ myAnts $ ants gs in
     do seq orders $ logString logger "End Turn"
        return orders

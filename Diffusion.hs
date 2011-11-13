@@ -3,10 +3,9 @@ module Diffusion where
           
 import Control.DeepSeq
 import Control.Monad
-import Control.Monad.ST
-import Data.Array
-import Data.Array.MArray
-import Data.Array.ST
+import Control.Monad.Primitive
+import qualified Data.Vector as V
+import qualified Data.Vector.Mutable as MV
 
 import qualified Data.Foldable as F
 import qualified Data.Traversable as T
@@ -14,11 +13,15 @@ import qualified Data.Traversable as T
 import Point
 import Ants
 
+<<<<<<< HEAD
 brightness :: [Char]
 brightness =  " .`-_':,;^=+/\"|)\\<>)iv%xclrs{*}I?!][1taeo7zjLu" ++ 
               "nTJCwfy325Fp6mqSghVd4EgXPGZbYkOA&8U$@KHDBWNMR0Q";
 
 type DiffusionGrid = Array Point Automata
+=======
+type DiffusionGrid = V.Vector Automata
+>>>>>>> Moved to vector
 
 data Automata = WaterAutomata |
                 Automata Int Int Int Float Float deriving (Eq)
@@ -91,20 +94,21 @@ testRule (Automata a _ fD _ _) tiles =
       fD' = F.foldl (\ f n -> max f (foodProb n - penalty)) fD tiles in
     Automata 0 0 fD' 0.0 0.0
 
-applyRule :: (NFData e, MArray a e m) => GameParams -> (Rule e) -> a Point e -> a Point e -> m ()
+applyRule :: (NFData e, PrimMonad m)  => GameParams -> (Rule e) -> MV.MVector (PrimState m) e -> MV.MVector (PrimState m) e -> m ()
 applyRule gp rule grid dest = do
-  b <- getBounds grid
-  forM_ (range b)
-        (\ i -> do v <- readArray grid i
-                   ns <- T.mapM (readArray grid) (neighbors gp i)
-                   let new = (rule v ns)
-                   seq (rnf new) $ writeArray dest i new)
+  let b = MV.length grid in 
+   forM_ [0..(b-1)]
+         (\ i -> do v <- MV.read grid i
+                    ns <- T.mapM (MV.read grid) (neighbors gp i)
+                    let new = (rule v ns) 
+                    seq (rnf new) $ MV.write dest i new)
 
 --Look at the strictness of this
 diffuse :: GameParams -> ImputedWorld -> Int -> DiffusionGrid
-diffuse gp iw steps = runSTArray $ do
-  grid1 <- (thaw iw >>= mapArray tileToEnum) :: ST s (STArray s Point Automata)
-  grid2 <- (getBounds grid1) >>= newArray_
+diffuse gp iw steps = 
+ V.create $ do
+  grid1 <- V.thaw $ V.map tileToEnum iw
+  grid2 <- MV.clone grid1
   applyRules grid1 grid2 steps
   where
     applyRules g1 _  0 = return g1
