@@ -2,7 +2,6 @@
 module Diffusion where
           
 import Control.DeepSeq
-import Control.Monad
 import Control.Monad.Primitive                     
 import Data.Maybe
 import qualified Data.Vector as V
