@@ -112,10 +112,10 @@ applyRule :: (NFData e, PrimMonad m)  => V.Vector SmartPoint -> (Rule e) -> MV.M
 applyRule smartPoints rule grid dest = do
   V.forM_ smartPoints
         (\ p -> do let i = dumbPoint p
-                   v <- MV.read grid i
-                   ns <- T.mapM (MV.read grid . dumbPoint) (neighbors p)
+                   v <- MV.unsafeRead grid i
+                   ns <- T.mapM (MV.unsafeRead grid . dumbPoint) (neighbors p)
                    let new = (rule v ns) 
-                   seq (rnf new) $ MV.write dest i new)
+                   seq (rnf new) $ MV.unsafeWrite dest i new)
 
 --Look at the strictness of this
 diffuse :: V.Vector SmartPoint -> ImputedWorld -> Int -> DiffusionGrid

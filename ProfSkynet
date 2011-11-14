@@ -1,2 +1,2 @@
 #!/bin/bash
-./Skynet +RTS -p -RTS $@
+./bin/Skynet +RTS -p -RTS $@
