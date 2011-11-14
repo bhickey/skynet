@@ -36,8 +36,13 @@ instance Ord Automata where
   compare a b = 
     let hill = compare (enemyHill a) (enemyHill b)
         f    = compare (foodProb a) (foodProb b)
-        myHill = compare (friendlyHill b) (friendlyHill a) in
-      firstNEQ [hill, f, myHill,LT]
+        myHill = compare (friendlyHill b) (friendlyHill a) 
+        noKami = if (friendlyAnt a) < (enemyAnt a) 
+                 then LT
+                 else if (friendlyAnt b) < (enemyAnt b)
+                      then GT
+                      else EQ in
+      firstNEQ [noKami, hill, f, myHill,LT]
       where firstNEQ = head . filter (\ x -> x /= EQ) 
 
 instance Show Automata where
@@ -98,7 +103,7 @@ testRule WaterAutomata _ = WaterAutomata
 testRule (Automata a e fD h eh r) tiles =
   let a'  = max a (F.foldl (\ f n -> f + (friendlyAnt n)/4) a tiles) / 2
       e'  = max e (F.foldl (\ f n -> f + (enemyAnt n)/4) a tiles) / 2
-      fD' = F.foldl (\ f n -> max f (foodProb n * (1.0 - friendlyAnt n))) fD tiles
+      fD' = if a' == 1.0 then 0.0 else F.foldl (\ f n -> max f (foodProb n * (1.0 - friendlyAnt n))) fD tiles
       h'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles 
       eh'  = F.foldl (\ f n -> max f (enemyHill n - 1)) eh tiles 
       r'  = if isJust r
