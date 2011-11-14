@@ -159,7 +159,7 @@ renderWorld w = concatMap renderAssoc (assocs w)
 --------------------------------------------------------------------------------
 -- Ants ------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-data Owner = Me | Enemy !Int deriving (Show,Eq, Ord)
+data Owner = Me | Enemy !Int deriving (Show, Eq, Ord)
 
 instance NFData Owner where
  rnf Me = ()
@@ -168,7 +168,7 @@ instance NFData Owner where
 data Ant = Ant
   { pointAnt :: !SmartPoint
   , ownerAnt :: !Owner
-  } deriving (Show)
+  } deriving (Show, Eq, Ord)
 
 
 isMe, isEnemy :: Ant -> Bool

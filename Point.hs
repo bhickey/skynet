@@ -35,7 +35,17 @@ col (_,c) s = s `mod` c
 point :: BoundingBox -> Int -> Int -> Point
 point (mR,mC) r c = (r `mod` mR) * mC + (c `mod` mC)
 
-data SmartPoint = SmartPoint (Neighbors SmartPoint) Point deriving Show
+data SmartPoint = SmartPoint (Neighbors SmartPoint) Point
+
+instance Eq SmartPoint where
+ s1 == s2 = dumbPoint s1 == dumbPoint s2
+
+instance Ord SmartPoint where
+ compare s1 s2 = compare (dumbPoint s1) (dumbPoint s2)
+
+instance Show SmartPoint where
+ show s = "SmartPoint " ++ (show $ dumbPoint s)
+
 
 dumbPoint :: SmartPoint -> Point
 dumbPoint (SmartPoint _ p) = p
