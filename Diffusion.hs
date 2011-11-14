@@ -3,7 +3,8 @@ module Diffusion where
           
 import Control.DeepSeq
 import Control.Monad
-import Control.Monad.Primitive
+import Control.Monad.Primitive                     
+import Data.Maybe
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
 
@@ -21,19 +22,19 @@ brightness =  " .`-_':,;^=+/\"|)\\<>)iv%xclrs{*}I?!][1taeo7zjLu" ++
 type DiffusionGrid = V.Vector Automata
 
 data Automata = WaterAutomata |
-                Automata Int Int Int Int Int deriving (Eq)
+                Automata Int Int Int Int Int (Maybe Owner) deriving (Eq)
 
 instance NFData Automata where
  rnf WaterAutomata = ()
- rnf (Automata a b c d e) = 
+ rnf (Automata a b c d e f) = 
   rnf a `seq` rnf b `seq`
   rnf c `seq` rnf d `seq`
-  rnf e `seq` ()
+  rnf e `seq` rnf f `seq` ()
 
 instance Ord Automata where
   compare WaterAutomata _ = LT
   compare _ WaterAutomata = GT
-  compare (Automata _ _ fa ha _) (Automata _ _ fb hb _) = 
+  compare (Automata _ _ fa ha _ _) (Automata _ _ fb hb _ _) = 
     let r = compare fa fb in
       case r of
         EQ -> compare hb ha
@@ -41,44 +42,48 @@ instance Ord Automata where
 
 instance Show Automata where
   show WaterAutomata = "#"
-  show (Automata _ _ f _ _) = 
+  show (Automata _ _ f _ _ _) = 
     if f > 100 - (length brightness) 
     then [brightness !! (length brightness - (100 - f) -1)]
     else " "
 
 friendlyAnt :: Automata -> Int
 friendlyAnt WaterAutomata = 0
-friendlyAnt (Automata f _ _ _ _) = f
+friendlyAnt (Automata f _ _ _ _ _) = f
 
 enemyAnt :: Automata -> Int
 enemyAnt WaterAutomata = 0
-enemyAnt (Automata _ e _ _ _) = e
+enemyAnt (Automata _ e _ _ _ _) = e
 
 foodProb :: Automata -> Int
 foodProb WaterAutomata = 0
-foodProb (Automata _ _ fp _ _) = fp
+foodProb (Automata _ _ fp _ _ _) = fp
 
 friendlyHill :: Automata -> Int
 friendlyHill WaterAutomata = 0
-friendlyHill (Automata _ _ _ fh _) = fh
+friendlyHill (Automata _ _ _ fh _ _) = fh
 
 enemyHill :: Automata -> Int
 enemyHill WaterAutomata = 0
-enemyHill (Automata _ _ _ _ eh) = eh
+enemyHill (Automata _ _ _ _ eh _) = eh
+
+reachableBy :: Automata -> Maybe Owner
+reachableBy WaterAutomata = Nothing
+reachableBy (Automata _ _ _ _ _ x) = x
 
 emptyAutomata :: Automata
-emptyAutomata = Automata 0 0 0 0 0
+emptyAutomata = Automata 0 0 0 0 0 Nothing
 
 waterAutomata :: Automata
 waterAutomata = WaterAutomata
 
 itemToEnum :: Item -> Automata
-itemToEnum (LiveAntItem Me)  = Automata 1 0 0 0 0
-itemToEnum (LiveAntItem _)   = Automata 0 1 0 0 0
+itemToEnum (LiveAntItem Me)  = Automata 1 0 0 0 0 (Just Me)
+itemToEnum (LiveAntItem x) = Automata 0 1 0 0 0 (Just x)
 itemToEnum (DeadAntItem _)   = emptyAutomata
-itemToEnum (HillItem Me)     = Automata 0 0 0 100 0
-itemToEnum (HillItem _)      = Automata 0 0 0 0 100
-itemToEnum FoodItem          = Automata 0 0 100 0 0
+itemToEnum (HillItem Me)     = Automata 0 0 0 100 0 Nothing
+itemToEnum (HillItem _)      = Automata 0 0 0 0 100 Nothing
+itemToEnum FoodItem          = Automata 0 0 100 0 0 Nothing
 itemToEnum BlankItem         = emptyAutomata
 
 tileToEnum :: Tile -> Automata
@@ -90,12 +95,18 @@ type Rule a = a -> Neighbors a -> a
 
 testRule :: Rule Automata
 testRule WaterAutomata _ = WaterAutomata
-testRule (Automata a _ fD h eh) tiles =
-  let foodPenalty = if a == 0 then 1 else 2
+testRule (Automata a _ fD h eh r) tiles =
+  let foodPenalty = if a == 0 then 1 else 4
       fD' = F.foldl (\ f n -> max f (foodProb n - foodPenalty)) fD tiles
       h'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles 
-      eh'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) eh tiles in
-    Automata a 0 fD' h' eh'
+      eh'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) eh tiles 
+      r'  = if isJust r
+            then r
+            else case mapMaybe reachableBy $ F.toList tiles of
+                   [] -> Nothing
+                   h:t -> Just h
+      in
+    Automata a 0 fD' h' eh' r'
 
 applyRule :: (NFData e, PrimMonad m)  => V.Vector SmartPoint -> (Rule e) -> MV.MVector (PrimState m) e -> MV.MVector (PrimState m) e -> m ()
 applyRule smartPoints rule grid dest = do
