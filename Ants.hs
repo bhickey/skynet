@@ -168,7 +168,7 @@ instance NFData Owner where
 data Ant = Ant
   { pointAnt :: !SmartPoint
   , ownerAnt :: !Owner
-  } deriving (Show, Eq, Ord)
+  } deriving (Show)
 
 
 isMe, isEnemy :: Ant -> Bool
