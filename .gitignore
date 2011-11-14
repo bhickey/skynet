@@ -4,6 +4,7 @@ logs_*
 *.out
 *.o
 *.hi
+*.hcr
 *.chi
 *.chs.h
 *.pyc
