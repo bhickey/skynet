@@ -7,6 +7,7 @@ module Neighbors (
  maxDirection,
  minDirection,
  selectDirection,
+ withDirections
 ) where
 import Control.Applicative
 
@@ -50,14 +51,17 @@ instance T.Traversable Neighbors where
   where combine [w,x,y,z] = Neighbors w x y z
         combine _ = undefined
 
+withDirections :: Neighbors a -> Neighbors (Direction, a)
+withDirections n = pure (,) <*> directions <*> n
 
 maxDirectionValue :: Ord a => Neighbors a -> (Direction, a)
 maxDirectionValue n =
- F.maximumBy compareSnd $ pure (,) <*> directions <*> n
+ F.maximumBy compareSnd $ withDirections n
  where compareSnd (_,a) (_,b) = compare a b
+
 minDirectionValue :: Ord a => Neighbors a -> (Direction, a)
 minDirectionValue n =
- F.minimumBy compareSnd $ pure (,) <*> directions <*> n
+ F.minimumBy compareSnd $ withDirections n
  where compareSnd (_,a) (_,b) = compare a b
 
 maxDirection :: Ord a => Neighbors a -> Direction
