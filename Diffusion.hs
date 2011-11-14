@@ -12,6 +12,7 @@ import qualified Data.Traversable as T
 
 import Point
 import Ants
+import Neighbors
 
 brightness :: [Char]
 brightness =  " .`-_':,;^=+/\"|)\\<>)iv%xclrs{*}I?!][1taeo7zjLu" ++ 
@@ -96,25 +97,25 @@ testRule (Automata a _ fD h eh) tiles =
       eh'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) eh tiles in
     Automata 0 0 fD' h' eh'
 
-applyRule :: (NFData e, PrimMonad m)  => GameParams -> (Rule e) -> MV.MVector (PrimState m) e -> MV.MVector (PrimState m) e -> m ()
-applyRule gp rule grid dest = do
-  let b = MV.length grid in 
-   forM_ [0..(b-1)]
-         (\ i -> do v <- MV.read grid i
-                    ns <- T.mapM (MV.read grid) (neighbors gp i)
-                    let new = (rule v ns) 
-                    seq (rnf new) $ MV.write dest i new)
+applyRule :: (NFData e, PrimMonad m)  => V.Vector SmartPoint -> (Rule e) -> MV.MVector (PrimState m) e -> MV.MVector (PrimState m) e -> m ()
+applyRule smartPoints rule grid dest = do
+  V.forM_ smartPoints
+        (\ p -> do let i = dumbPoint p
+                   v <- MV.read grid i
+                   ns <- T.mapM (MV.read grid . dumbPoint) (neighbors p)
+                   let new = (rule v ns) 
+                   seq (rnf new) $ MV.write dest i new)
 
 --Look at the strictness of this
-diffuse :: GameParams -> ImputedWorld -> Int -> DiffusionGrid
-diffuse gp iw steps = 
+diffuse :: V.Vector SmartPoint -> ImputedWorld -> Int -> DiffusionGrid
+diffuse points iw steps = 
  V.create $ do
   grid1 <- V.thaw $ V.map tileToEnum iw
   grid2 <- MV.clone grid1
   applyRules grid1 grid2 steps
   where
     applyRules g1 _  0 = return g1
-    applyRules g1 g2 n = applyRule gp testRule g1 g2 >> applyRules g2 g1 (n-1)
+    applyRules g1 g2 n = applyRule points testRule g1 g2 >> applyRules g2 g1 (n-1)
 
-diffusionScore :: GameParams -> V.Vector Automata -> Point -> Direction
-diffusionScore gp dg p = maxDirection $ fmap (dg V.!) (neighbors gp p)
+diffusionScore :: V.Vector Automata -> SmartPoint -> Direction
+diffusionScore dg p = maxDirection $ fmap ((dg V.!) . dumbPoint) (neighbors p)

@@ -1,5 +1,11 @@
-module GameParams where
+module GameParams (
+  GameParams(..),
+  viewCircle,
+  attackCircle,
+  spawnCircle,
+) where
 
+import Point
 
 data GameParams = GameParams
   { loadtime :: Int
@@ -11,8 +17,13 @@ data GameParams = GameParams
   , viewradius2 :: Int
   , attackradius2 :: Int
   , spawnradius2 :: Int
-  --, viewCircle :: [Point]
-  --, attackCircle :: [Point]
-  --, spawnCircle :: [Point]
-  } deriving (Show)
+  , smartGrid :: SmartGrid
+  , smartVector :: SmartVector
+  } 
 
+viewCircle :: GameParams -> SmartPoint -> [SmartPoint]
+viewCircle gp p = getPointCircle (viewradius2 gp) p
+attackCircle :: GameParams -> SmartPoint -> [SmartPoint]
+attackCircle gp p = getPointCircle (attackradius2 gp) p
+spawnCircle :: GameParams -> SmartPoint -> [SmartPoint]
+spawnCircle gp p = getPointCircle (spawnradius2 gp) p

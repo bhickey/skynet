@@ -30,8 +30,6 @@ module Ants
     -- Utility functions
   , myAnts
   , enemyAnts
-  , distance
-  , neighbors
   
     -- Debugging
   --, renderWorld
@@ -46,8 +44,9 @@ import Data.Char (toUpper)
 import Data.Time.Clock
 
 import Point
-import Control.DeepSeq
+import Neighbors
 import GameParams
+import Control.DeepSeq
 
 --------------------------------------------------------------------------------
 -- Tiles -----------------------------------------------------------------------
@@ -167,12 +166,9 @@ instance NFData Owner where
  rnf (Enemy x) = seq x ()
 
 data Ant = Ant
-  { pointAnt :: !Point
+  { pointAnt :: !SmartPoint
   , ownerAnt :: !Owner
   } deriving (Show, Eq, Ord)
-
-instance NFData Ant where
- rnf (Ant p o) = rnf p `seq` rnf o `seq` ()
 
 
 isMe, isEnemy :: Ant -> Bool
@@ -187,7 +183,7 @@ enemyAnts = filter isEnemy
 -- Hills -----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 data Hill = Hill
-  { pointHill :: !Point
+  { pointHill :: !SmartPoint
   , ownerHill :: !Owner
   } deriving (Show)
 
@@ -206,10 +202,7 @@ enemyHills = filter isEnemy's
 --------------------------------------------------------------------------------
 
 
-data Order = Order Ant Direction deriving (Show)
-
-instance NFData Order where
- rnf (Order a d) = rnf a `seq` rnf d `seq` ()
+data Order = Order !Ant !Direction deriving (Show)
 
 toOwner :: Int -> Owner
 toOwner 0 = Me
@@ -218,7 +211,7 @@ toOwner a = Enemy a
 --------------------------------------------------------------------------------
 -- GameDetails -----------------------------------------------------------------
 --------------------------------------------------------------------------------
-type Food = Point
+type Food = SmartPoint
 
 data GameState = GameState
   { world :: World

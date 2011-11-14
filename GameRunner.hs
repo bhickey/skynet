@@ -16,6 +16,7 @@ import System.IO
 
 import Util
 import Point
+import GameParams
 
 
 
@@ -41,12 +42,12 @@ setVisible mw p = do
 
 addVisible :: World
            -> GameParams -- viewPoints
-           -> Point -- center point
+           -> SmartPoint -- center point
            -> World
 addVisible w gp p = 
   V.create $ do 
     w' <- V.unsafeThaw w
-    mapM_ (setVisible w') (viewCircle gp p)
+    mapM_ (setVisible w' . dumbPoint) (viewCircle gp p)
     return w'
 
 updateGameState :: GameParams -> GameState -> String -> GameState
@@ -54,34 +55,34 @@ updateGameState gp gs s
   | "f" `isPrefixOf` s = -- add food
       let p = toPoint.tail $ s
           fs' = p:food gs
-          nw = writeTile (world gs) p (LandTile FoodItem)
+          nw = writeTile (world gs) (dumbPoint p) (LandTile FoodItem)
       in GameState nw (ants gs) fs' (hills gs) (startTime gs)
   | "w" `isPrefixOf` s = -- add water
       let p = toPoint.tail $ s
-          nw = writeTile (world gs) p WaterTile
+          nw = writeTile (world gs) (dumbPoint p) WaterTile
       in GameState nw (ants gs) (food gs) (hills gs) (startTime gs)
   | "h" `isPrefixOf` s = -- add hill
       let p = toPoint.init.tail $ s
           own = toOwner.digitToInt.last $ s
           hs = Hill { pointHill = p, ownerHill = own}:hills gs
-          nw = writeTile (world gs) p . LandTile . HillItem $ own
+          nw = writeTile (world gs) (dumbPoint p) . LandTile . HillItem $ own
       in GameState nw (ants gs) (food gs) hs (startTime gs)
   | "a" `isPrefixOf` s = -- add ant
       let own = toOwner.digitToInt.last $ s
           p = toPoint.init.tail $ s
           as' = Ant { pointAnt = p, ownerAnt = own}:ants gs
-          nw = writeTile (world gs) p . LandTile . LiveAntItem $ own
+          nw = writeTile (world gs) (dumbPoint p) . LandTile . LiveAntItem $ own
           nw' = if own == Me then addVisible nw gp p else nw
       in GameState nw' as' (food gs) (hills gs) (startTime gs)
   | "d" `isPrefixOf` s = -- add dead ant
       let own = toOwner.digitToInt.last $ s
           p = toPoint.init.tail $ s
-          nw = writeTile (world gs) p . LandTile . DeadAntItem $  own
+          nw = writeTile (world gs) (dumbPoint p) . LandTile . DeadAntItem $  own
       in GameState nw (ants gs) (food gs) (hills gs) (startTime gs)
   | otherwise = gs -- ignore line
   where
-    toPoint :: String -> Point
-    toPoint = (uncurry $ point gp) .tuplify2.map read.words
+    toPoint :: String -> SmartPoint
+    toPoint = (uncurry $ smartGrid gp) .tuplify2.map read.words
     writeTile w p t = V.create $ do
       w' <- V.unsafeThaw w
       MV.write w' p MetaTile {tile = t, visible = Observed}
@@ -101,6 +102,7 @@ createParams s =
       sr2 = lookup' "spawnradius2"
       r  = lookup' "rows"
       c  = lookup' "cols"
+      (grid,vector) = smartWorld (r,c)
   in GameParams { loadtime      = lookup' "loadtime"
                 , turntime      = lookup' "turntime"
                 , rows          = r
@@ -110,9 +112,8 @@ createParams s =
                 , viewradius2   = vr2
                 , attackradius2 = ar2
                 , spawnradius2  = sr2
-                --, viewCircle    = vp
-                --, attackCircle  = ap
-                --, spawnCircle   = sp
+                , smartGrid = grid
+                , smartVector = vector
                 }
 
 modifyWorld :: MWorld s -> (MetaTile -> MetaTile) -> Point -> ST s ()
@@ -168,10 +169,11 @@ finishTurn = do
 
 issueOrder :: GameParams -> Order -> IO ()
 issueOrder gp (Order ant direction) = do
-  let srow = (show . row gp . pointAnt) ant
-      scol = (show . col gp . pointAnt) ant 
+  let srow = (show . row box . dumbPoint . pointAnt) ant
+      scol = (show . col box . dumbPoint . pointAnt) ant 
       sdir = show direction
   putStrLn $ "o " ++ srow ++ " " ++ scol ++ " " ++ sdir
+  where box = (rows gp,cols gp)
 
 
 
