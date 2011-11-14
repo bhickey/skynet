@@ -33,11 +33,16 @@ instance NFData Automata where
 instance Ord Automata where
   compare WaterAutomata _ = LT
   compare _ WaterAutomata = GT
-  compare (Automata _ _ fa ha _ _) (Automata _ _ fb hb _ _) = 
-    let r = compare fa fb in
-      case r of
-        EQ -> compare hb ha
-        _ -> r
+  compare a b = 
+    let hill = compare (enemyHill a) (enemyHill b)
+        f    = compare (foodProb a) (foodProb b)
+        myHill = compare (friendlyHill b) (friendlyHill a) in
+    if hill /= EQ
+    then hill
+    else if f /= EQ
+         then f
+         else myHill
+    
 
 instance Show Automata where
   show WaterAutomata = "#"
