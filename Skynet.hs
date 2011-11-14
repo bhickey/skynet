@@ -36,7 +36,8 @@ doTurn logger gp = do
   gs <- ask
   let grid = diffuse (smartVector gp) (impute (world gs)) 40
       orders = withStrategy (evalList rseq) $ mapMaybe (generateOrders grid) $ myAnts $ ants gs in
-    do seq orders $ logString logger "End Turn"
+    do logString logger (showGrid (rows gp,cols gp) grid)
+       seq orders $ logString logger "End Turn"
        return orders
 
 

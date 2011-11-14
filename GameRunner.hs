@@ -46,7 +46,8 @@ addVisible :: World
            -> World
 addVisible w gp p = 
   V.create $ do 
-    w' <- V.unsafeThaw w
+    --w' <- V.unsafeThaw w
+    w' <- V.thaw w
     mapM_ (setVisible w' . dumbPoint) (viewCircle gp p)
     return w'
 
@@ -84,7 +85,8 @@ updateGameState gp gs s
     toPoint :: String -> SmartPoint
     toPoint = (uncurry $ smartGrid gp) .tuplify2.map read.words
     writeTile w p t = V.create $ do
-      w' <- V.unsafeThaw w
+      --w' <- V.unsafeThaw w
+      w' <- V.thaw w
       MV.write w' p MetaTile {tile = t, visible = Observed}
       return w'
 

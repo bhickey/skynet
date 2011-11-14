@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Point(
  Point(),
+ BoundingBox,
  row,col,
  SmartPoint,
  SmartGrid,
@@ -57,21 +58,25 @@ smartWorld box = (find,storage)
    construct s = SmartPoint (fmap (getNeighbor s) directions) s 
    getNeighbor s dir = storage V.! dumbNeighbor s dir
    dumbNeighbor :: Point -> Direction -> Point
-   dumbNeighbor p North = deltaPoint box 0 1 p
-   dumbNeighbor p East = deltaPoint box 1 0 p
-   dumbNeighbor p South = deltaPoint box 0 (-1) p
-   dumbNeighbor p West = deltaPoint box (-1) 0 p
+   dumbNeighbor p North = deltaPoint box (-1) 0 p
+   dumbNeighbor p East = deltaPoint box 0 1 p
+   dumbNeighbor p South = deltaPoint box 1 0 p
+   dumbNeighbor p West = deltaPoint box 0 (-1) p
 
 
     
 deltaPoint :: BoundingBox -> Int -> Int -> Point -> Point
-deltaPoint (mr,mc) x y s =
- (s + (x * mc) + y) `mod` (mr * mc)
+deltaPoint (mr,mc) r c s =
+ let oldr = div s mc
+     oldc = mod s mc
+     newr = (oldr + r + mr) `mod` mr
+     newc = (oldc + c + mc) `mod` mc in
+   newr * mc + newc
 
 deltaSmartPoint :: Int -> Int -> SmartPoint -> SmartPoint
-deltaSmartPoint x y s = moveNS (moveEW s x) y
+deltaSmartPoint r c s = moveNS (moveEW s c) r
  where
-  moveNS p v = move p (if v < 0 then South else North) (abs v)
+  moveNS p v = move p (if v < 0 then North else South) (abs v)
   moveEW p v = move p (if v < 0 then West else East) (abs v)
   move p _ 0 = p 
   move p d v = move (neighbor p d) d (v-1)
@@ -92,14 +97,6 @@ getPointCircle :: Int -- radius squared
 getPointCircle r2 p =
   let rx = truncate.sqrt.(fromIntegral::Int -> Double) $ r2
   in map deltaPoint' $ filter ((<=r2).twoNormSquared) $ (,) <$> [-rx..rx] <*> [-rx..rx]
-  where deltaPoint' (x,y) = deltaSmartPoint x y p 
+  where deltaPoint' (r,c) = deltaSmartPoint r c p 
 
 
---
-{-
-showGrid :: (Show a) => Array Point a -> String
-showGrid g = 
-  let (Point s1, Point s2) = bounds g
-      points = [[show $ g ! (Point r c) | c <- [c0..c1]] | r <- [r0..r1]] in
-    unlines $ map unwords points
--}

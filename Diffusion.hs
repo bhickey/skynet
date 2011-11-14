@@ -43,7 +43,7 @@ instance Show Automata where
   show WaterAutomata = "#"
   show (Automata _ _ f _ _) = 
     if f > 100 - (length brightness) 
-    then [brightness !! (length brightness - f)]
+    then [brightness !! (length brightness - (100 - f) -1)]
     else " "
 
 friendlyAnt :: Automata -> Int
@@ -95,7 +95,7 @@ testRule (Automata a _ fD h eh) tiles =
       fD' = F.foldl (\ f n -> max f (foodProb n - foodPenalty)) fD tiles
       h'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles 
       eh'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) eh tiles in
-    Automata 0 0 fD' h' eh'
+    Automata a 0 fD' h' eh'
 
 applyRule :: (NFData e, PrimMonad m)  => V.Vector SmartPoint -> (Rule e) -> MV.MVector (PrimState m) e -> MV.MVector (PrimState m) e -> m ()
 applyRule smartPoints rule grid dest = do
@@ -117,5 +117,12 @@ diffuse points iw steps =
     applyRules g1 _  0 = return g1
     applyRules g1 g2 n = applyRule points testRule g1 g2 >> applyRules g2 g1 (n-1)
 
-diffusionScore :: V.Vector Automata -> SmartPoint -> Direction
+diffusionScore :: DiffusionGrid -> SmartPoint -> Direction
 diffusionScore dg p = maxDirection $ fmap ((dg V.!) . dumbPoint) (neighbors p)
+
+
+showGrid :: BoundingBox -> DiffusionGrid -> String
+showGrid b@(mr,mc) g = 
+ let points = [[show $ g V.! (point b r c) | c <- [0..(mc-1)]] | r <- [0..(mr-1)]] in
+     unlines $ map unwords points
+
