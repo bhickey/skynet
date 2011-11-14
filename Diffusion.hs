@@ -104,7 +104,7 @@ testRule (Automata a _ fD h eh r) tiles =
             then r
             else case mapMaybe reachableBy $ F.toList tiles of
                    [] -> Nothing
-                   h:t -> Just h
+                   hd:_ -> Just hd
       in
     Automata a 0 fD' h' eh' r'
 
