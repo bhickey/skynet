@@ -30,7 +30,6 @@ module Ants
     -- Utility functions
   , myAnts
   , enemyAnts
-  , passable
   , distance
   , neighbors
   
@@ -161,7 +160,7 @@ renderWorld w = concatMap renderAssoc (assocs w)
 --------------------------------------------------------------------------------
 -- Ants ------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-data Owner = Me | Enemy !Int deriving (Show,Eq)
+data Owner = Me | Enemy !Int deriving (Show,Eq, Ord)
 
 instance NFData Owner where
  rnf Me = ()
@@ -170,7 +169,7 @@ instance NFData Owner where
 data Ant = Ant
   { pointAnt :: !Point
   , ownerAnt :: !Owner
-  } deriving (Show)
+  } deriving (Show, Eq, Ord)
 
 instance NFData Ant where
  rnf (Ant p o) = rnf p `seq` rnf o `seq` ()
@@ -211,11 +210,6 @@ data Order = Order Ant Direction deriving (Show)
 
 instance NFData Order where
  rnf (Order a d) = rnf a `seq` rnf d `seq` ()
-
-passable :: GameParams -> World -> Order -> Bool
-passable gp w (Order ant direction) =
-  let newPoint = neighbor gp (pointAnt ant) direction
-  in  isWater $ tile (w V.! newPoint)
 
 toOwner :: Int -> Owner
 toOwner 0 = Me

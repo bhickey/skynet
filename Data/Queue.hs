@@ -3,7 +3,7 @@ License      : PublicDomain
 Stability    : experimental
 -}
 
-module Queue where
+module Data.Queue where
 
 import Prelude hiding (seq, drop, null)
 import Data.Sequence hiding (null, empty, fromList)
