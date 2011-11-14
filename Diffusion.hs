@@ -21,7 +21,7 @@ brightness =  " .`-_':,;^=+/\"|)\\<>)iv%xclrs{*}I?!][1taeo7zjLu" ++
 type DiffusionGrid = V.Vector Automata
 
 data Automata = WaterAutomata |
-                Automata Int Int Int Int Int (Maybe Owner) deriving (Eq)
+                Automata Float Float Int Int Int (Maybe Owner) deriving (Eq)
 
 instance NFData Automata where
  rnf WaterAutomata = ()
@@ -36,8 +36,11 @@ instance Ord Automata where
   compare a b = 
     let hill = compare (enemyHill a) (enemyHill b)
         f    = compare (foodProb a) (foodProb b)
+        antA = (enemyAnt a) > 0.25 && (enemyAnt a) > (friendlyAnt a)
+        antB = (enemyAnt b) > 0.25 && (enemyAnt b) > (friendlyAnt b)
+        noKami = if antA then GT else if antB then LT else EQ
         myHill = compare (friendlyHill b) (friendlyHill a) in
-      firstNEQ [hill, f, myHill,LT]
+      firstNEQ [noKami, hill, f, myHill,LT]
       where firstNEQ = head . filter (\ x -> x /= EQ) 
 
 instance Show Automata where
@@ -47,11 +50,11 @@ instance Show Automata where
     then [brightness !! (length brightness - (100 - f) -1)]
     else " "
 
-friendlyAnt :: Automata -> Int
+friendlyAnt :: Automata -> Float
 friendlyAnt WaterAutomata = 0
 friendlyAnt (Automata f _ _ _ _ _) = f
 
-enemyAnt :: Automata -> Int
+enemyAnt :: Automata -> Float
 enemyAnt WaterAutomata = 0
 enemyAnt (Automata _ e _ _ _ _) = e
 
@@ -78,8 +81,8 @@ waterAutomata :: Automata
 waterAutomata = WaterAutomata
 
 itemToEnum :: Item -> Automata
-itemToEnum (LiveAntItem Me)  = Automata 1 0 0 0 0 (Just Me)
-itemToEnum (LiveAntItem x) = Automata 0 1 0 0 0 (Just x)
+itemToEnum (LiveAntItem Me)  = Automata 1.0 0 0 0 0 (Just Me)
+itemToEnum (LiveAntItem x) = Automata 0 1.0 0 0 0 (Just x)
 itemToEnum (DeadAntItem _)   = emptyAutomata
 itemToEnum (HillItem Me)     = Automata 0 0 0 100 0 Nothing
 itemToEnum (HillItem _)      = Automata 0 0 0 0 100 Nothing
@@ -95,8 +98,10 @@ type Rule a = a -> Neighbors a -> a
 
 testRule :: Rule Automata
 testRule WaterAutomata _ = WaterAutomata
-testRule (Automata a _ fD h eh r) tiles =
-  let foodPenalty = if a == 0 then 1 else 4
+testRule (Automata a e fD h eh r) tiles =
+  let foodPenalty = if a >= 100 then 1 else 4   
+      a'  = max a (F.foldl (\ f n -> f + (friendlyAnt n)/4) a tiles) / 2
+      e'  = max e (F.foldl (\ f n -> f + (enemyAnt n)/4) a tiles) / 2
       fD' = F.foldl (\ f n -> max f (foodProb n - foodPenalty)) fD tiles
       h'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles 
       eh'  = F.foldl (\ f n -> max f (enemyHill n - 1)) eh tiles 
@@ -106,7 +111,7 @@ testRule (Automata a _ fD h eh r) tiles =
                    [] -> Nothing
                    hd:_ -> Just hd
       in
-    Automata a 0 fD' h' eh' r'
+    Automata a' e' fD' h' eh' r'
 
 applyRule :: (NFData e, PrimMonad m)  => V.Vector SmartPoint -> (Rule e) -> MV.MVector (PrimState m) e -> MV.MVector (PrimState m) e -> m ()
 applyRule smartPoints rule grid dest = do
