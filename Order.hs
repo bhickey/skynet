@@ -6,12 +6,12 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
 
-import Point
+import Point hiding (Point)
 import Ants
 
 type AntQueue = Queue Ant
-type Orders = Map Ant [Point] 
-type Occupied = Map Point Ant
+type Orders = Map Ant [SmartPoint] 
+type Occupied = Map SmartPoint Ant
 
 orderAll :: Orders -> [Order]
 orderAll od =
@@ -36,11 +36,11 @@ maybeEvict a aq od occ =
             else aq in
     makeOrders aq od (M.insert (pointAnt a) a occ)
 
-noEvict :: Ant -> Point -> AntQueue -> Orders -> Occupied -> [Order]
+noEvict :: Ant -> SmartPoint -> AntQueue -> Orders -> Occupied -> [Order]
 noEvict a p aq od occ =
   if M.member (pointAnt a) occ
   then makeOrders (enqueue aq a) od occ
   else (makeOrder a p):(makeOrders aq od (M.insert p a occ))
 
-makeOrder :: Ant -> Point -> Order
+makeOrder :: Ant -> SmartPoint -> Order
 makeOrder a p = undefined
