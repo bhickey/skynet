@@ -16,6 +16,7 @@ import System.IO
 
 import Util
 import Point
+import Order
 import GameParams
 
 
@@ -127,7 +128,7 @@ modifyWorld mw f p = do
 
 
 gameLoop :: GameParams 
-         -> BotMonad [Order]
+         -> BotMonad [FinalOrder]
          -> World
          -> [String] -- input
          -> IO ()
@@ -146,7 +147,7 @@ gameLoop gp doTurn w (line:input)
   | otherwise = gameLoop gp doTurn w input
 gameLoop _ _ _ [] = endGame []
 
-game :: (GameParams -> BotMonad [Order]) -> IO ()
+game :: (GameParams -> BotMonad [FinalOrder]) -> IO ()
 game doTurn = do
   content <- getContents
   let cs = break (isPrefixOf "ready") $ lines content
@@ -169,8 +170,9 @@ finishTurn = do
   putStrLn "go" 
   hFlush stdout
 
-issueOrder :: GameParams -> Order -> IO ()
-issueOrder gp (Order ant direction) = do
+issueOrder :: GameParams -> FinalOrder -> IO ()
+issueOrder _ (FinalOrder _ Stay) = return ()
+issueOrder gp (FinalOrder ant (Move direction)) = do
   let srow = (show . row box . dumbPoint . pointAnt) ant
       scol = (show . col box . dumbPoint . pointAnt) ant 
       sdir = show direction

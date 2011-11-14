@@ -1,12 +1,12 @@
 module Main where
 
-import Data.Maybe (mapMaybe)
 import Control.Monad.Reader.Class
 
 import Ants
 import BotMonad
 import GameRunner
 import Diffusion
+import Order
 import Control.Parallel.Strategies
 --import Util
 import Logging
@@ -18,8 +18,8 @@ tryOrder :: World -> [Order] -> Maybe Order
 tryOrder _ [] = Nothing
 tryOrder _ o = Just $ head o
 
-generateOrders :: DiffusionGrid -> Ant -> Maybe Order
-generateOrders d a@(Ant p _) = Just $ Order a (diffusionScore d p)
+generateOrder :: DiffusionGrid -> Ant -> RankedOrders 
+generateOrder d a@(Ant p _) = RankedOrders a [diffusionScore d p]
 
 {- |
  - Implement this function to create orders.
@@ -30,12 +30,12 @@ generateOrders d a@(Ant p _) = Just $ Order a (diffusionScore d p)
  - for each see Ants module for more information
  -}
 
-doTurn :: Logger -> GameParams -> BotMonad [Order]
+doTurn :: Logger -> GameParams -> BotMonad [FinalOrder]
 doTurn logger gp = do
   logString logger "Start Turn"
   gs <- ask
   let grid = diffuse (smartVector gp) (impute (world gs)) 40
-      orders = withStrategy (evalList rseq) $ mapMaybe (generateOrders grid) $ myAnts $ ants gs in
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder grid) . myAnts $ ants gs in
     do logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        seq orders $ logString logger "End Turn"
        return orders

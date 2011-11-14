@@ -5,7 +5,6 @@ module Ants
   , Ant (..)
   , Direction (..)
   , GameState (..)
-  , Order (Order)
   , World
   , ImputedWorld
   , Hill (..)
@@ -200,9 +199,6 @@ enemyHills = filter isEnemy's
 --------------------------------------------------------------------------------
 -- Orders ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
-
-
-data Order = Order !Ant !Direction deriving (Show)
 
 toOwner :: Int -> Owner
 toOwner 0 = Me

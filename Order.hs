@@ -1,46 +1,49 @@
-module Order where              
+module Order(
+    Order (..)
+  , FinalOrder (..)
+  , RankedOrders (..)
+  , finalizeOrders,
+)where              
 
 import Prelude hiding (null)
-import Data.Queue
 import Data.Map (Map)
 import qualified Data.Map as M
-import Data.Maybe
 
 import Point hiding (Point)
 import Ants
 
-type AntQueue = Queue Ant
-type Orders = Map Ant [SmartPoint] 
-type Occupied = Map SmartPoint Ant
 
-orderAll :: Orders -> [Order]
-orderAll od =
-  let queue = fromList $ M.keys od in
-    makeOrders queue od M.empty
 
-makeOrders :: AntQueue -> Orders -> Occupied -> [Order]
-makeOrders aq od occ =
-  if null aq
-  then []
-  else let a = peek aq
-           aq' = dequeue aq
-           myOrders = fromJust $ M.lookup a od in
-         case myOrders of
-           [] -> maybeEvict a aq' (M.delete a od) occ
-           hd:tl -> noEvict a hd aq' (M.insert a tl od) occ
+data Order = Stay | Move !Direction 
+data FinalOrder = FinalOrder !Ant !Order
+--Stay is always the least desired order because it can always be fufilled
+--Thus it is represented by the end of the list
+data RankedOrders = RankedOrders !Ant [Direction]
 
-maybeEvict :: Ant -> AntQueue -> Orders -> Occupied -> [Order]
-maybeEvict a aq od occ =
-  let aq' = if M.member (pointAnt a) occ
-            then enqueue aq (fromJust $ M.lookup (pointAnt a) occ)
-            else aq in
-    makeOrders aq od (M.insert (pointAnt a) a occ)
+type Occupied = Map SmartPoint RankedOrders
 
-noEvict :: Ant -> SmartPoint -> AntQueue -> Orders -> Occupied -> [Order]
-noEvict a p aq od occ =
-  if M.member (pointAnt a) occ
-  then makeOrders (enqueue aq a) od occ
-  else (makeOrder a p):(makeOrders aq od (M.insert p a occ))
+finalizeOrders :: [RankedOrders] -> [FinalOrder]
+finalizeOrders orders = makeOrders orders M.empty
 
-makeOrder :: Ant -> SmartPoint -> Order
-makeOrder a p = undefined
+makeOrders :: [RankedOrders] -> Occupied -> [FinalOrder]
+makeOrders (order@(RankedOrders ant []):rest) occ =
+  case M.lookup p occ of
+   Just evicted -> makeOrders (removeOrder evicted:rest) nextOcc 
+   Nothing -> makeOrders rest nextOcc
+ where
+  p = (pointAnt ant)
+  nextOcc = (M.insert p order occ)
+  removeOrder (RankedOrders a (_:tl)) = (RankedOrders a tl)
+  removeOrder (RankedOrders _ []) = error "Evicted from own square"
+
+makeOrders (order@(RankedOrders ant (dir:tl)):rest) occ =
+  case M.lookup p occ of
+   Just _ -> makeOrders ((RankedOrders ant tl):rest) occ
+   Nothing -> makeOrders rest (M.insert p order occ)
+ where
+  p = neighbor (pointAnt ant) dir
+
+makeOrders [] occ = map construct . M.elems $ occ
+ where construct (RankedOrders ant []) = FinalOrder ant Stay
+       construct (RankedOrders ant (dir:_)) = FinalOrder ant (Move dir)
+
