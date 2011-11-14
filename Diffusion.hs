@@ -37,12 +37,8 @@ instance Ord Automata where
     let hill = compare (enemyHill a) (enemyHill b)
         f    = compare (foodProb a) (foodProb b)
         myHill = compare (friendlyHill b) (friendlyHill a) in
-    if hill /= EQ
-    then hill
-    else if f /= EQ
-         then f
-         else myHill
-    
+      firstNEQ [hill, f, myHill,LT]
+      where firstNEQ = head . filter (\ x -> x /= EQ) 
 
 instance Show Automata where
   show WaterAutomata = "#"
@@ -103,7 +99,7 @@ testRule (Automata a _ fD h eh r) tiles =
   let foodPenalty = if a == 0 then 1 else 4
       fD' = F.foldl (\ f n -> max f (foodProb n - foodPenalty)) fD tiles
       h'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles 
-      eh'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) eh tiles 
+      eh'  = F.foldl (\ f n -> max f (enemyHill n - 1)) eh tiles 
       r'  = if isJust r
             then r
             else case mapMaybe reachableBy $ F.toList tiles of
