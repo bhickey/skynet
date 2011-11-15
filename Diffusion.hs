@@ -21,7 +21,7 @@ brightness =  " .`-_':,;^=+/\"|)\\<>)iv%xclrs{*}I?!][1taeo7zjLu" ++
 type DiffusionGrid = V.Vector Automata
 
 data Automata = WaterAutomata |
-                Automata Float Float Float Int Int (Maybe Owner) deriving (Eq)
+                Automata Float Float Float Float Float (Maybe Owner) deriving (Eq)
 
 instance NFData Automata where
  rnf WaterAutomata = ()
@@ -64,11 +64,11 @@ foodProb :: Automata -> Float
 foodProb WaterAutomata = 0
 foodProb (Automata _ _ fp _ _ _) = fp
 
-friendlyHill :: Automata -> Int
+friendlyHill :: Automata -> Float
 friendlyHill WaterAutomata = 0
 friendlyHill (Automata _ _ _ fh _ _) = fh
 
-enemyHill :: Automata -> Int
+enemyHill :: Automata -> Float
 enemyHill WaterAutomata = 0
 enemyHill (Automata _ _ _ _ eh _) = eh
 
@@ -86,8 +86,8 @@ itemToEnum :: Item -> Automata
 itemToEnum (LiveAntItem Me)  = Automata 1.0 0 0 0 0 (Just Me)
 itemToEnum (LiveAntItem x) = Automata 0 1.0 0 0 0 (Just x)
 itemToEnum (DeadAntItem _)   = emptyAutomata
-itemToEnum (HillItem Me)     = Automata 0 0 0 100 0 Nothing
-itemToEnum (HillItem _)      = Automata 0 0 0 0 100 Nothing
+itemToEnum (HillItem Me)     = Automata 0 0 0 1.0 0 Nothing
+itemToEnum (HillItem _)      = Automata 0 0 0 0 1.0 Nothing
 itemToEnum FoodItem          = Automata 0 0 1.0 0 0 Nothing
 itemToEnum BlankItem         = emptyAutomata
 
@@ -104,8 +104,8 @@ testRule (Automata a e fD h eh r) tiles =
   let a'  = max a (F.foldl (\ f n -> f + (friendlyAnt n)/4) a tiles) / 2
       e'  = max e (F.foldl (\ f n -> f + (enemyAnt n)/4) a tiles) / 2
       fD' = if a' == 1.0 then 0.0 else F.foldl (\ f n -> max f (foodProb n * (1.0 - friendlyAnt n))) fD tiles
-      h'  = F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles 
-      eh'  = F.foldl (\ f n -> max f (enemyHill n - 1)) eh tiles 
+      eh' = if a' == 1.0 then eh * 0.1 else F.foldl (\ f n -> max f (enemyHill n * (1.0 - friendlyAnt n))) eh tiles
+      h' = F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles
       r'  = if isJust r
             then r
             else case mapMaybe reachableBy $ F.toList tiles of
