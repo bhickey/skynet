@@ -34,7 +34,7 @@ doTurn :: Logger -> GameParams -> BotMonad [FinalOrder]
 doTurn logger gp = do
   logString logger "Start Turn"
   gs <- ask
-  let grid = diffuse (smartVector gp) (impute (world gs)) 35
+  let grid = diffuse (smartVector gp) (impute (world gs)) 20
       orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder grid) . myAnts $ ants gs in
     do logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        seq orders $ logString logger "End Turn"
