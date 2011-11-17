@@ -101,11 +101,12 @@ type Rule a = a -> Neighbors a -> a
 testRule :: Rule Automata
 testRule WaterAutomata _ = WaterAutomata
 testRule (Automata a e fD h eh r) tiles =
-  let a'  = max a (F.foldl (\ f n -> f + (friendlyAnt n)/4) a tiles) / 2
+  let w = F.foldl (\ x n -> if n == WaterAutomata then x + 1 else x) 0 tiles 
+      a'  = max a (F.foldl (\ f n -> f + (friendlyAnt n)/4) a tiles) / 2
       e'  = max e (F.foldl (\ f n -> f + (enemyAnt n)/4) a tiles) / 2
       fD' = if a' == 1.0 then 0.0 else F.foldl (\ f n -> max f (foodProb n * (1.0 - friendlyAnt n))) fD tiles
       eh' = if a' == 1.0 then eh * 0.1 else F.foldl (\ f n -> max f (enemyHill n * (1.0 - friendlyAnt n))) eh tiles
-      h' = F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles
+      h' = ((w+1.0)/5) * F.foldl (\ f n -> max f (friendlyHill n - 1)) h tiles
       r'  = if isJust r
             then r
             else case mapMaybe reachableBy $ F.toList tiles of
