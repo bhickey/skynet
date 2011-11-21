@@ -14,6 +14,9 @@ newtype Queue a = Queue { seq :: Seq a }
 enqueue :: Queue a -> a -> Queue a
 enqueue (Queue s) e = Queue (s |> e)
 
+enqueueAll :: Queue a -> [a] -> Queue a
+enqueueAll q l = Queue (seq q >< (S.fromList l))
+
 dequeue :: Queue a -> Queue a
 dequeue (Queue s) = (Queue $ drop 1 s)
 

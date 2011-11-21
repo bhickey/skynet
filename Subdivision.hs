@@ -9,6 +9,7 @@ import Data.Queue
 
 import Data.Set (Set)
 import qualified Data.Set as S
+import qualified Data.Foldable as F
 
 controlPoints :: GameParams -> World -> Queue (Int, SmartPoint)
 controlPoints gp w =
@@ -24,5 +25,5 @@ search queue closed =
   then []
   else let (divId, sp) = peek queue
            queue' = dequeue queue
-           n = foldl (\ a x -> if (S.member x closed) then a else x:a) [] (neighbors sp) in
-         n ++ (search queue' closed)
+           (closed', n) = F.foldl (\ acc@(cl, a) x -> if (S.member x cl) then acc else ((S.insert x cl), (divId,x):a)) (closed, []) (neighbors sp) in
+         n ++ (search queue' closed')
