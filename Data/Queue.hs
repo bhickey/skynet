@@ -6,7 +6,7 @@ Stability    : experimental
 module Data.Queue where
 
 import Prelude hiding (seq, drop, null)
-import Data.Sequence hiding (null, empty, fromList)
+import Data.Sequence ((|>), (><), Seq, drop, index)
 import qualified Data.Sequence as S
 
 newtype Queue a = Queue { seq :: Seq a }

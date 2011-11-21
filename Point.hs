@@ -12,13 +12,11 @@ module Point(
  neighbor,
  point,
  getPointCircle,
-
 ) where
 
 import qualified Data.Vector as V
 import Neighbors
 import Control.Applicative
-
 
 type BoundingBox = (Int,Int)
 
