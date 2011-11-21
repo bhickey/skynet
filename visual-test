@@ -4,7 +4,7 @@ cd tools
 ./playgame.py \
  -m maps/example/tutorial1.map \
  ../bin/Skynet \
- ../bin/Skynet \
- --turns 40 \
+ "python sample_bots/python/HunterBot.py" \
+ --turns 200 \
  -e --verbose --log_dir game_logs
 
