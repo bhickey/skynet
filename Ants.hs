@@ -6,7 +6,6 @@ module Ants
   , Direction (..)
   , GameState (..)
   , World
-  , DividedWorld
   , ImputedWorld
   , Hill (..)
   , Item (..)
@@ -132,7 +131,7 @@ visibleMetaTile (MetaTile t _) = MetaTile t Observed
 -- Immutable World -------------------------------------------------------------
 --------------------------------------------------------------------------------
 type World = V.Vector MetaTile
-type DividedWorld = V.Vector (MetaTile, Int)
+type SearchableWorld = V.Vector (MetaTile, [(SmartPoint, Int, Int)])
 type ImputedWorld = V.Vector Tile
 
 impute :: World -> ImputedWorld

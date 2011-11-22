@@ -13,8 +13,12 @@ import qualified Data.Vector as V
 import Data.List (sort)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
+import Data.Map (Map)
 import qualified Data.Set as S
 import qualified Data.Foldable as F
+
+type DividedWorld = V.Vector (MetaTile, Division)
+data Division = Division Int | WaterDivision
 
 controlPoints :: GameParams -> World -> Queue (SmartPoint, Int)
 controlPoints gp w =
@@ -35,8 +39,17 @@ search fn queue closed =
            (closed', n) = F.foldl (\ acc@(cl, a) x -> if (fn x || S.member x cl) then acc else ((S.insert x cl), (x,divId):a)) (closed, []) (neighbors sp) in
          n ++ (search fn queue' closed')
 
+
 subdivide :: GameParams -> World -> DividedWorld
 subdivide gp w =
     let q = controlPoints gp w
         fn = (\ x -> isWater.tile $ w ! dumbPoint x) in
-      V.fromList $ map (\ (x,i) -> ((w ! dumbPoint x),i)) $ sort $ search fn q S.empty
+       unsafeUpd (V.map (\ x -> (x, WaterDivision)) w) (map (\ (x,i) -> (dumbPoint x, ((w ! dumbPoint x), Division i))) $ search fn q S.empty)
+
+{-
+divisionAdjacencies :: DividedWorld -> Map DivisionId (Set DivisionId)
+divisionAdjacencies dw =
+  V.foldl 
+  -}
+
+
