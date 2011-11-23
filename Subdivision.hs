@@ -11,6 +11,8 @@ import Data.Queue
 import Data.Vector hiding (fromList, (++), null, map, zip, foldl, any, concat)
 import qualified Data.Vector as V
 import Data.Maybe (mapMaybe)
+import Data.Sequence ((><))
+import qualified Data.Sequence as Q
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Map (Map)
@@ -48,9 +50,9 @@ subdivide gp w =
         fn = (\ x -> isWater.tile $ w ! dumbPoint x) in
        unsafeUpd (V.map (\ x -> (x, WaterDivision)) w) (map (\ (x,i) -> (dumbPoint x, ((w ! dumbPoint x), Division i))) $ search fn seq q S.empty)
 
-makeQueues :: GameParams -> DividedWorld -> [(Division, Potential)]
+makeQueues :: GameParams -> DividedWorld -> Map Division (Queue Potential)
 makeQueues gp dw =
-  concat $ map makePotential $ V.foldl (\ acc p -> if hasForeign p then p:acc else acc) [] (smartVector gp)
+  M.map fromSequence $ M.fromListWith (><) $ concat $ map makePotential $ V.foldl (\ acc p -> if hasForeign p then p:acc else acc) [] (smartVector gp)
     where get p = snd $ dw ! dumbPoint p
           hasForeign p = let div = get p in
             div /= WaterDivision && F.any (\ np -> div /= (get np)) (neighbors p)
@@ -58,7 +60,7 @@ makeQueues gp dw =
             F.foldl (\ acc np -> 
                       let dir = fst np
                           div' = get $ snd np in
-                        if (div == div') || (div' == WaterDivision) then acc else (div, (div', snd np, dir, 1)):acc) [] (withDirections $ neighbors p)
+                        if (div == div') || (div' == WaterDivision) then acc else (div, Q.singleton (div', snd np, dir, 1)):acc) [] (withDirections $ neighbors p)
 
 
 bfsDivision :: GameParams -> DividedWorld -> (Division, Division) -> [(SmartPoint, (Direction, Int))]

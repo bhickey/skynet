@@ -13,6 +13,7 @@ module Data.Queue
   , empty
   , singleton
   , fromList 
+  , fromSequence
   ) where
 
 import Prelude hiding (seq, drop, null)
@@ -44,3 +45,6 @@ singleton e = Queue (S.singleton e)
 
 fromList :: [a] -> Queue a
 fromList l = Queue (S.fromList l)
+
+fromSequence :: Seq a -> Queue a
+fromSequence = Queue
