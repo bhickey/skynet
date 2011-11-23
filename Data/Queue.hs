@@ -3,7 +3,17 @@ License      : PublicDomain
 Stability    : experimental
 -}
 
-module Data.Queue where
+module Data.Queue 
+  ( Queue
+  , enqueue
+  , enqueueAll
+  , dequeue
+  , peek
+  , null
+  , empty
+  , singleton
+  , fromList 
+  ) where
 
 import Prelude hiding (seq, drop, null)
 import Data.Sequence ((|>), (><), Seq, drop, index)
