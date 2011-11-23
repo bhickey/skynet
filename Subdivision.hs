@@ -34,23 +34,31 @@ controlPoints gp w =
           stopFn p = not.isWater.tile $ w ! (dumbPoint p)
           f p = explore hilbert2 stopFn p
 
-search :: (SmartPoint -> Bool) -> (SmartPoint -> a -> b) -> Queue (SmartPoint, a) -> Set SmartPoint -> [(SmartPoint, b)]
+search :: (SmartPoint -> Bool) -> (SmartPoint -> SmartPoint -> Direction -> a -> b) -> Queue (SmartPoint, a) -> Set SmartPoint -> [(SmartPoint, b)]
 search fn updateFn queue closed =
   if null queue
   then []
   else let (point, dat) = peek queue
-           dat' = updateFn point dat
            queue' = dequeue queue
-           (closed', n) = F.foldl (\ acc@(cl, a) x -> if (fn x || S.member x cl) then acc else ((S.insert x cl), (x,dat'):a)) (closed, []) (neighbors point) in
+           (closed', n) = F.foldl (\ acc@(cl, a) (dir,x) -> if (fn x || S.member x cl) then acc else ((S.insert x cl), (x, updateFn point x dir dat):a)) (closed, []) (withDirections $ neighbors point) in
          n ++ (search fn updateFn queue' closed')
 
 subdivide :: GameParams -> World -> DividedWorld
 subdivide gp w =
     let q = controlPoints gp w
-        fn = (\ x -> isWater.tile $ w ! dumbPoint x) in
-       unsafeUpd (V.map (\ x -> (x, WaterDivision)) w) (map (\ (x,i) -> (dumbPoint x, ((w ! dumbPoint x), Division i))) $ search fn seq q S.empty)
+        fn = (\ x -> isWater.tile $ w ! dumbPoint x) 
+        update _ _ _ x = x in
+       unsafeUpd (V.map (\ x -> (x, WaterDivision)) w) (map (\ (x,i) -> (dumbPoint x, ((w ! dumbPoint x), Division i))) $ search fn update q S.empty)
 
-makeQueues :: GameParams -> DividedWorld -> Map Division (Queue Potential)
+searchPotential :: GameParams -> DividedWorld -> Queue (SmartPoint, Potential) -> [(SmartPoint, Potential)]
+searchPotential gp dw q =
+  search hasForeign updatePotential q S.empty
+  where get p = snd $ dw ! dumbPoint p
+        updatePotential _ _ dir (targetDiv, targetPoint, _, dist) = (targetDiv, targetPoint, dir, dist + 1) 
+        hasForeign p = let div = get p in
+          div == WaterDivision && F.any (\ np -> div /= (get np)) (neighbors p) 
+
+makeQueues :: GameParams -> DividedWorld -> Map Division (Queue (SmartPoint, Potential))
 makeQueues gp dw =
   M.map fromSequence $ M.fromListWith (><) $ concat $ map makePotential $ V.foldl (\ acc p -> if hasForeign p then p:acc else acc) [] (smartVector gp)
     where get p = snd $ dw ! dumbPoint p
@@ -60,7 +68,7 @@ makeQueues gp dw =
             F.foldl (\ acc np -> 
                       let dir = fst np
                           div' = get $ snd np in
-                        if (div == div') || (div' == WaterDivision) then acc else (div, Q.singleton (div', snd np, dir, 1)):acc) [] (withDirections $ neighbors p)
+                        if (div == div') || (div' == WaterDivision) then acc else (div, Q.singleton (p, (div', snd np, dir, 1))):acc) [] (withDirections $ neighbors p)
 
 
 bfsDivision :: GameParams -> DividedWorld -> (Division, Division) -> [(SmartPoint, (Direction, Int))]
