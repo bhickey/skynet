@@ -48,7 +48,7 @@ subdivide gp w =
         fn = (\ x -> isWater.tile $ w ! dumbPoint x) in
        unsafeUpd (V.map (\ x -> (x, WaterDivision)) w) (map (\ (x,i) -> (dumbPoint x, ((w ! dumbPoint x), Division i))) $ search fn seq q S.empty)
 
-makeQueues :: GameParams -> DividedWorld -> [Potential]
+makeQueues :: GameParams -> DividedWorld -> [(Division, Potential)]
 makeQueues gp dw =
   concat $ map makePotential $ V.foldl (\ acc p -> if hasForeign p then p:acc else acc) [] (smartVector gp)
     where get p = snd $ dw ! dumbPoint p
@@ -58,7 +58,7 @@ makeQueues gp dw =
             F.foldl (\ acc np -> 
                       let dir = fst np
                           div' = get $ snd np in
-                        if (div == div') || (div' == WaterDivision) then acc else (div', snd np, dir, 1):acc) [] (withDirections $ neighbors p)
+                        if (div == div') || (div' == WaterDivision) then acc else (div, (div', snd np, dir, 1)):acc) [] (withDirections $ neighbors p)
 
 
 bfsDivision :: GameParams -> DividedWorld -> (Division, Division) -> [(SmartPoint, (Direction, Int))]
