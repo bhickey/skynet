@@ -8,6 +8,8 @@ import Point
 import Path
 import Data.Queue
 
+import Data.Heap (Heap)
+import qualified Data.Heap as H
 import Data.Vector hiding (fromList, (++), null, map, zip, foldl, any, concat)
 import qualified Data.Vector as V
 import Data.Maybe (mapMaybe)
@@ -51,10 +53,15 @@ subdivide gp w =
        unsafeUpd (V.map (\ x -> (x, WaterDivision)) w) (map (\ (x,i) -> (dumbPoint x, ((w ! dumbPoint x), Division i))) $ search fn updateFn q S.empty)
 
 getStep :: SearchGraph -> SmartPoint -> SmartPoint -> Direction
-getStep = undefined
+getStep sg start dest = undefined
+
+dijkstra :: (SmartPoint -> [Potential]) -> Heap (Int, Potential) -> Set Division -> Direction
+dijkstra pf sq closed = undefined
 
 makeSearchGraph :: GameParams -> DividedWorld -> SearchGraph
-makeSearchGraph = undefined 
+makeSearchGraph gp dw = 
+  let v = V.map (\ _ -> []) (smartVector gp) in
+    V.unsafeAccum (flip(:)) v $ map (\ (x,y) -> (dumbPoint x, y)) $ concat $ M.elems $ M.map (searchPotential dw) (makeQueues gp dw)
 
 searchPotential :: DividedWorld -> Queue (SmartPoint, Potential) -> [(SmartPoint, Potential)]
 searchPotential dw q =
