@@ -3,8 +3,8 @@
 -- New BSD License (see http://www.opensource.org/licenses/bsd-license.php)
 --
 
-module Data.Heap.Skew 
-(Heap, head, tail, merge, singleton, empty, null, fromList, toList, insert) 
+module Data.Heap
+(Heap (Leaf), head, tail, merge, singleton, empty, null, fromList, toList, insert) 
 where
 
 import Prelude hiding (head, tail, null)

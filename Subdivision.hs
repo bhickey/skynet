@@ -8,9 +8,9 @@ import Point
 import Path
 import Data.Queue
 
-import Data.Heap (Heap)
+import Data.Heap (Heap (Leaf))
 import qualified Data.Heap as H
-import Data.Vector hiding (fromList, (++), null, map, zip, foldl, any, concat)
+import Data.Vector hiding (fromList, (++), null, map, zip, foldl, any, concat, filter)
 import qualified Data.Vector as V
 import Data.Maybe (mapMaybe)
 import Data.Sequence ((><))
@@ -52,11 +52,19 @@ subdivide gp w =
         updateFn _ _ _ x = x in
        unsafeUpd (V.map (\ x -> (x, WaterDivision)) w) (map (\ (x,i) -> (dumbPoint x, ((w ! dumbPoint x), Division i))) $ search fn updateFn q S.empty)
 
-getStep :: SearchGraph -> SmartPoint -> SmartPoint -> Direction
-getStep sg start dest = undefined
-
-dijkstra :: (SmartPoint -> [Potential]) -> Heap (Int, Potential) -> Set Division -> Direction
-dijkstra pf sq closed = undefined
+astar :: (SmartPoint -> [(Int, SmartPoint)]) -> 
+         (SmartPoint -> Int) -> 
+         Heap (Int, Int, Direction, SmartPoint) -> 
+         Set SmartPoint ->
+         Direction
+astar _ _ Leaf _ = North
+astar next h sq closed =
+  let (hg, g, dir, pt) = (H.head sq) in
+    if hg == g then dir
+     else let closed' = S.insert pt closed
+              pts = H.fromList $ map (\ (d,p) -> (g + d + h p, g + d, dir, p)) $ filter (\ (_,x) -> not (S.member x closed)) (next pt)
+              sq' = H.merge pts (H.tail sq) in
+            astar next h sq' closed'
 
 makeSearchGraph :: GameParams -> DividedWorld -> SearchGraph
 makeSearchGraph gp dw = 
