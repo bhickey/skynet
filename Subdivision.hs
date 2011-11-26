@@ -12,7 +12,7 @@ import Data.Heap (Heap (Leaf))
 import qualified Data.Heap as H
 import Data.Vector hiding (fromList, (++), null, map, zip, foldl, any, concat, filter)
 import qualified Data.Vector as V
-import Data.Maybe (mapMaybe)
+import Data.Maybe (Maybe, mapMaybe, Just, Nothing)
 import Data.Sequence ((><))
 import qualified Data.Sequence as Q
 import Data.Set (Set)
@@ -56,15 +56,20 @@ astar :: (SmartPoint -> [(Int, SmartPoint)]) ->
          (SmartPoint -> Int) -> 
          Heap (Int, Int, Direction, SmartPoint) -> 
          Set SmartPoint ->
-         Direction
-astar _ _ Leaf _ = North
-astar next h sq closed =
-  let (hg, g, dir, pt) = (H.head sq) in
-    if hg == g then dir
-     else let closed' = S.insert pt closed
-              pts = H.fromList $ map (\ (d,p) -> (g + d + h p, g + d, dir, p)) $ filter (\ (_,x) -> not (S.member x closed)) (next pt)
-              sq' = H.merge pts (H.tail sq) in
-            astar next h sq' closed'
+         Maybe (Int, Direction)
+         Maybe (Int, Direction)
+astar _ _ Leaf _ _ = Nothing
+astar next h sq closed bestSoln =
+  let (hg, g, dir, pt) = (H.head sq) 
+      hp = h p in
+    if hp == 0
+    then case bestSoln of
+           Nothing -> Just (g, dir)
+           Just (g', dir') -> if g < g' then Just (g, dir) else bestSoln
+    else let closed' = S.insert pt closed
+             pts = H.fromList $ map (\ (d,p) -> (g + d + h p, g + d, dir, p)) $ filter (\ (_,x) -> not (S.member x closed)) (next pt)
+             sq' = H.merge pts (H.tail sq) in
+           astar next h sq' closed'
 
 makeSearchGraph :: GameParams -> DividedWorld -> SearchGraph
 makeSearchGraph gp dw = 
