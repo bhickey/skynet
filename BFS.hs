@@ -5,9 +5,7 @@ import Point
 
 import qualified Data.Foldable as F
 
-import Data.IntSet (IntSet)
 import qualified Data.IntSet as I
-import Data.Queue (Queue)
 import qualified Data.Queue as Q
 import Data.Vector (Vector)
 import qualified Data.Vector as V
