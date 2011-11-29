@@ -6,7 +6,6 @@ module Ants
   , Direction (..)
   , GameState (..)
   , World
-  , ImputedWorld
   , Hill (..)
   , Item (..)
   , Tile (..)
@@ -25,7 +24,6 @@ module Ants
   , isWater
   , visibleMetaTile
   , toOwner
-  , impute
     -- Utility functions
   , myAnts
   , enemyAnts
@@ -131,10 +129,6 @@ visibleMetaTile (MetaTile t _) = MetaTile t Observed
 -- Immutable World -------------------------------------------------------------
 --------------------------------------------------------------------------------
 type World = V.Vector MetaTile
-type ImputedWorld = V.Vector Tile
-
-impute :: World -> ImputedWorld
-impute w = V.map tile w
 
 {-
 colBound :: World -> Int

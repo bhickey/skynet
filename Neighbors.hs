@@ -1,6 +1,6 @@
 module Neighbors (
  Direction(..),
- Neighbors,
+ Neighbors(..),
  directions,
  maxDirectionValue,
  minDirectionValue,

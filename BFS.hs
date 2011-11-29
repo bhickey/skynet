@@ -1,4 +1,4 @@
-module BFS where
+module BFS (bfs) where
 
 import Neighbors
 import Point
@@ -11,7 +11,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Data.List (sortBy)
 
-bfs :: ((Direction, SmartPoint) -> (Int, b)) -> [SmartPoint] -> Vector b
+bfs :: ((SmartPoint, a) -> SmartPoint -> a) -> [(SmartPoint, a)] -> Vector a
 bfs fn pts =
   V.fromList $ (map snd) $ (sortBy comparator) $ bfs' (Q.fromList pts) I.empty
   where comparator x y = compare (fst x) (fst y)
@@ -19,9 +19,11 @@ bfs fn pts =
             if Q.null q
             then []
             else let top = Q.peek q
-                     n = filter 
-                         (\ (_,p) -> flip I.notMember closed $ dumbPoint p) 
-                         $ F.toList (withDirections $ neighbors top)
-                     c' = foldl (\ s (_,p) -> I.insert (dumbPoint p) s) closed n
-                     q' = Q.enqueueAll q (map snd n) in
-                   (map fn n) ++ (bfs' q' c')
+                     pts = filter 
+                           (\ p -> flip I.notMember closed $ dumbPoint p) 
+                           $ F.toList (neighbors (fst top))
+                     dpts = map dumbPoint pts
+                     vals = map (fn top) pts
+                     c' = foldl (flip I.insert) closed dpts
+                     q' = Q.enqueueAll q (zip pts vals) in
+                     (zip dpts vals) ++ (bfs' q' c')
