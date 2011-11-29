@@ -1,25 +1,23 @@
 module Main where
 
+import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 
 import Ants
 import BotMonad
 import GameRunner
-import Diffusion
 import Order
 import Control.Parallel.Strategies
+import System.Random
+import Data.List (permutations)
 --import Util
 import Logging
+                               
+randDirections :: Int -> [Direction]
+randDirections x = (permutations [North,South,East,West]) !! x
 
-
--- | Picks the first "passable" order in a list
--- returns Nothing if no such order exists
-tryOrder :: World -> [Order] -> Maybe Order
-tryOrder _ [] = Nothing
-tryOrder _ o = Just $ head o
-
-generateOrder :: DiffusionGrid -> Ant -> RankedOrders 
-generateOrder d a@(Ant p _) = RankedOrders a [diffusionScore d p]
+generateOrder :: Int -> Ant -> RankedOrders 
+generateOrder x a = RankedOrders a (randDirections x)
 
 {- |
  - Implement this function to create orders.
@@ -31,12 +29,12 @@ generateOrder d a@(Ant p _) = RankedOrders a [diffusionScore d p]
  -}
 
 doTurn :: Logger -> GameParams -> BotMonad [FinalOrder]
-doTurn logger gp = do
+doTurn logger _ = do
   logString logger "Start Turn"
   gs <- ask
-  let grid = diffuse (smartVector gp) (impute (world gs)) 20
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder grid) . myAnts $ ants gs in
-    do logString logger ('\n':(showGrid (rows gp,cols gp) grid))
+  rnd <- liftIO $ randomRIO (0,23)
+  let orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder rnd) . myAnts $ ants gs in
+    do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        seq orders $ logString logger "End Turn"
        return orders
 

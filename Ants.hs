@@ -131,7 +131,6 @@ visibleMetaTile (MetaTile t _) = MetaTile t Observed
 -- Immutable World -------------------------------------------------------------
 --------------------------------------------------------------------------------
 type World = V.Vector MetaTile
-type SearchableWorld = V.Vector (MetaTile, [(SmartPoint, Int, Int)])
 type ImputedWorld = V.Vector Tile
 
 impute :: World -> ImputedWorld
