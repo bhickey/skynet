@@ -18,9 +18,6 @@ import Data.Time.Clock
 
 import System.IO
 
-
-
-
 newtype BotMonad a = BotMonad (ReaderT GameState (RandT StdGen IO) a)
   deriving (Monad, Functor, MonadRandom, MonadIO)
 
