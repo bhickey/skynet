@@ -13,7 +13,8 @@ import Data.List (sortBy)
 
 bfs :: (a -> (Direction, SmartPoint) -> a) -> [(SmartPoint, a)] -> Vector a
 bfs fn pts =
-  V.fromList $ (map snd) $ (sortBy comparator) $ bfs' (Q.fromList pts) I.empty
+  V.fromList $ (map snd) $ (sortBy comparator) 
+  $ bfs' (Q.fromList pts) (I.fromList (map (dumbPoint.fst) pts))
   where comparator x y = compare (fst x) (fst y)
         bfs' q closed =
             if Q.null q
