@@ -12,7 +12,6 @@ module Point(
  neighbor,
  point,
  getPointCircle,
- travelDirection,
 ) where
 
 import qualified Data.Vector as V
@@ -54,14 +53,6 @@ neighbors (SmartPoint n _) = n
 
 neighbor :: SmartPoint -> Direction -> SmartPoint
 neighbor sp d = selectDirection (neighbors sp) d
- 
-travelDirection :: SmartPoint -> SmartPoint -> Direction
-travelDirection p0 p1 =
-    let (Neighbors n e s _) = neighbors p0 in
-      if p1 == n then North
-      else if p1 == e then East
-           else if p1 == s then South
-                else West
  
 -- Note for correct sharing the first argument should only be
 -- provided once

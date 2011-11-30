@@ -1,13 +1,14 @@
 module Neighbors (
  Direction(..),
- Neighbors(..),
+ Neighbors,
  directions,
  maxDirectionValue,
  minDirectionValue,
  maxDirection,
  minDirection,
  selectDirection,
- withDirections
+ withDirections,
+ fromDirection
 ) where
 import Control.Applicative
 
@@ -29,6 +30,12 @@ selectDirection (Neighbors x _ _ _) North = x
 selectDirection (Neighbors _ x _ _) East  = x
 selectDirection (Neighbors _ _ x _) South = x
 selectDirection (Neighbors _ _ _ x) West  = x
+
+fromDirection :: Direction -> Direction
+fromDirection North = South
+fromDirection East = West
+fromDirection South = North
+fromDirection West = East
 
 data Neighbors a = Neighbors !a !a !a !a deriving (Show)
 instance Functor Neighbors where

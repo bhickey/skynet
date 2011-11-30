@@ -10,11 +10,12 @@ module System.Random.Shuffle
     (
      shuffle
     , shuffle'
+    , unsafeShuffle
     ) where
 
 import Data.Function (fix)
-import System.Random (RandomGen, randomR)
-
+import System.Random
+import System.IO.Unsafe
 
 -- A complete binary tree, of leaves and internal nodes.
 -- Internal node: Node card l r
@@ -97,3 +98,11 @@ shuffle' elements len = shuffle elements . rseq len
             rseq' i gen = (j, gen) : rseq' (i - 1) gen'
                 where
                   (j, gen') = randomR (0, i) gen
+
+unsafeShuffle :: [a] -> [a]
+unsafeShuffle l = unsafePerformIO $
+    do r <- getStdGen
+       let (r', stdR) = split r
+           shuffled = shuffle' l (length l) r' in
+         setStdGen stdR >>
+         return shuffled

@@ -1,23 +1,29 @@
 module Main where
 
-import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 
 import Ants
 import BotMonad
 import GameRunner
+import Point
 import Order
+import Searches
 import Control.Parallel.Strategies
-import System.Random
-import Data.List (permutations)
 --import Util
-import Logging
+import Logging                    
+import Data.Vector (Vector, (!))
                                
-randDirections :: Int -> [Direction]
-randDirections x = (permutations [North,South,East,West]) !! x
-
-generateOrder :: Int -> Ant -> RankedOrders 
-generateOrder x a = RankedOrders a (randDirections x)
+generateOrder :: Vector (Food, Ant, Direction)
+              -> Vector Direction
+              -> Ant 
+              -> RankedOrders 
+generateOrder fd un a = 
+  let ap = dumbPoint $ pointAnt a
+      (_,owner,foodDir) = fd ! ap
+      unseenDir = un ! ap in
+    if owner == a
+    then RankedOrders a [foodDir, unseenDir]
+    else RankedOrders a [unseenDir, foodDir]
 
 {- |
  - Implement this function to create orders.
@@ -29,11 +35,13 @@ generateOrder x a = RankedOrders a (randDirections x)
  -}
 
 doTurn :: Logger -> GameParams -> BotMonad [FinalOrder]
-doTurn logger _ = do
+doTurn logger gp = do
   logString logger "Start Turn"
   gs <- ask
-  rnd <- liftIO $ randomRIO (0,23)
-  let orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder rnd) . myAnts $ ants gs in
+  let owner = ownership gs
+      foodOwner = nearestFood gs owner
+      unseen = nearestUnseen gp gs 
+  let orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder foodOwner unseen) . myAnts $ ants gs in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        seq orders $ logString logger "End Turn"
        return orders

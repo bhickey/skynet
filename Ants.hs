@@ -3,6 +3,7 @@ module Ants
     -- Data structures
     Owner (..)
   , Ant (..)
+  , Food
   , Direction (..)
   , GameState (..)
   , World
@@ -12,6 +13,7 @@ module Ants
   , MetaTile (..)
   , GameParams (..)
   , Visibility (..)
+  , isUnobserved
 
     -- Tile Functions
   , isLiveAnt
@@ -118,6 +120,9 @@ renderMetaTile (MetaTile t v) =
         Unobserved -> id
         Predicted -> id
 
+isUnobserved :: MetaTile -> Bool
+isUnobserved (MetaTile _ Unobserved) = True
+isUnobserved _ = False
 
 -- | Sets the tile to visible, if the tile is still unknown then it is land.
 visibleMetaTile :: MetaTile -> MetaTile
