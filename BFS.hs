@@ -26,5 +26,5 @@ bfs fn pts =
                      dpts = map (dumbPoint.snd) npts
                      vals = map (fn v) npts
                      c' = foldl (flip I.insert) closed dpts
-                     q' = Q.enqueueAll q (zip (map snd npts) vals) in
+                     q' = Q.enqueueAll (Q.dequeue q) (zip (map snd npts) vals) in
                    (zip dpts vals) ++ (bfs' q' c')

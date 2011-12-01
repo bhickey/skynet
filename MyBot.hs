@@ -41,9 +41,9 @@ doTurn logger gp = do
   let owner = ownership gs
       foodOwner = nearestFood gs owner
       unseen = nearestUnseen gp gs 
-  let orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder foodOwner unseen) . myAnts $ ants gs in
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder foodOwner unseen) . myAnts $ ants gs in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
-       seq orders $ logString logger "End Turn"
+       --seq orders $ logString logger "End Turn"
        return orders
 
 
