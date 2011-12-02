@@ -163,7 +163,7 @@ instance NFData Owner where
  rnf Me = ()
  rnf (Enemy x) = seq x ()
 
-data Ant = Ant
+data Ant = NullAnt | Ant
   { pointAnt :: !SmartPoint
   , ownerAnt :: !Owner
   } deriving (Show, Eq, Ord)

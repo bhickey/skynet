@@ -5,27 +5,47 @@ import BFS
 import Point
 import Neighbors
 
-import Data.Vector ((!))
+import Data.Vector ((!), Vector)
 import qualified Data.Vector as V
 
+skipWater :: GameState -> SmartPoint -> Bool
+skipWater gs p = (not.isWater.tile) ((world gs) ! (dumbPoint p))
+
+vectorOf :: GameState -> a -> Vector a
+vectorOf gs a = V.map (\ _ -> a) (world gs) 
+
 ownership :: GameState -> V.Vector Ant
-ownership gs = bfs (\ a _ -> a) 
+ownership gs = bfs 
+    (vectorOf gs NullAnt)
+    (skipWater gs)
+    (\ a _ -> a)
     (map (\ a -> (pointAnt a, a)) (ants gs))
 
-nearestFood :: GameState -> V.Vector Ant -> V.Vector (Food, Ant, Direction)
+nearestFood :: GameState -> V.Vector Ant -> V.Vector (Maybe (Food, Ant, Int, Direction))
 nearestFood gs av = bfs
-  (\ (f, a, _) (d, _) -> (f, a, fromDirection d))
-  (map (\ f -> (f, (f, av ! (dumbPoint f), North))) (food gs))
+  (vectorOf gs Nothing)
+  (skipWater gs)
+  searchFn
+  (map (\ f -> (f, Just (f, av ! (dumbPoint f), 0, North))) (food gs))
+  where searchFn Nothing _ = Nothing
+        searchFn (Just (f, a, dist, _)) (d, _) = Just (f, a, dist + 1, fromDirection d)
 
-nearestEnemy :: GameState -> V.Vector (Ant, Direction)
+nearestEnemy :: GameState -> V.Vector (Maybe (Ant, Direction))
 nearestEnemy gs = bfs
-  (\ (a, _) (d, _) -> (a, fromDirection d))
-  (map (\ a -> (pointAnt a, (a, North))) (enemyAnts $ ants gs))
+  (vectorOf gs Nothing)
+  (skipWater gs)
+  searchFn
+  (map (\ a -> (pointAnt a, Just (a, North))) (enemyAnts $ ants gs))
+  where searchFn Nothing _ = Nothing
+        searchFn (Just (a, _)) (d, _) = Just (a, fromDirection d)
 
-nearestUnseen :: GameParams -> GameState -> V.Vector Direction
+nearestUnseen :: GameParams -> GameState -> V.Vector (Maybe Direction)
 nearestUnseen gp gs = let
   sv = smartVector gp
   w = world gs in
     bfs
-    (\ _ (d, _) -> d)
-    (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [North, South, East, West]))
+    (vectorOf gs Nothing)
+    (skipWater gs)
+    (\ _ (d, _) -> Just d)
+    (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [Just North]))
+
