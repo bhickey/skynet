@@ -17,15 +17,15 @@ bfs :: V.Vector a
 bfs def incl fn pts =
   let delta = bfs' (Q.fromList pts) (I.fromList (map (dumbPoint.fst) pts)) in
     def // delta
-  where bfs' q closed =
+  where bfs' q c =
           if Q.null q
           then []
           else let (pt, v) = Q.peek q
-                   npts = filter (\ (_, p) -> I.notMember (dumbPoint p) closed && incl p) $
+                   npts = filter (\ (_, p) -> I.notMember (dumbPoint p) c && incl p) $
                      F.toList $ (withDirections.neighbors) pt
                    spts = map snd npts
                    dpts = map dumbPoint spts
                    vs = map (fn v) npts
-                   c' = foldl (flip I.insert) closed dpts
+                   c' = foldl (flip I.insert) c dpts
                    q' = Q.enqueueAll (Q.dequeue q) (zip spts vs) in
             (zip dpts vs) ++ (bfs' q' c')
