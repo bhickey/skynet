@@ -40,12 +40,12 @@ nearestEnemy gs = bfs
         searchFn (Just (a, _)) (d, _) = Just (a, fromDirection d)
 
 nearestUnseen :: GameParams -> GameState -> V.Vector (Maybe Direction)
-nearestUnseen gp gs = let
-  sv = smartVector gp
-  w = world gs in
-    bfs
+nearestUnseen _ gs = --let
+  --sv = smartVector gp
+  --w = world gs in
+  --  bfs
     (vectorOf gs Nothing)
-    (skipWater gs)
-    (\ _ (d, _) -> Just d)
-    (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [Just North]))
+  --  (skipWater gs)
+  --  (\ _ (d, _) -> Just d)
+  --  (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [Just North]))
 

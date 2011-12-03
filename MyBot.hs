@@ -13,7 +13,7 @@ import Control.Parallel.Strategies
 import Logging                    
 import Data.Vector (Vector, (!))
                                
-generateOrder :: Vector (Maybe Direction)
+generateOrder :: Vector (Maybe (Food, Ant, Int, Direction))
               -> Ant 
               -> RankedOrders 
 generateOrder un a = 
@@ -21,7 +21,7 @@ generateOrder un a =
       maybeDir = un ! ap in
     case maybeDir of
       Nothing -> RankedOrders a []
-      Just dir -> RankedOrders a [dir]
+      Just (_,_,_,dir) -> RankedOrders a [dir]
 
 {- |
  - Implement this function to create orders.
@@ -33,11 +33,13 @@ generateOrder un a =
  -}
 
 doTurn :: Logger -> GameParams -> BotMonad [FinalOrder]
-doTurn logger gp = do
+doTurn logger _ = do
   logString logger "Start Turn"
   gs <- ask
-  let unseen = nearestUnseen gp gs 
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder unseen) . myAnts $ ants gs in
+  let owner = ownership gs
+      nFood = nearestFood gs owner
+      --unseen = nearestUnseen gp gs 
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood) . myAnts $ ants gs in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        --seq orders $ logString logger "End Turn"
        return orders
