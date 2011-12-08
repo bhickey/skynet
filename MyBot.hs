@@ -11,17 +11,35 @@ import Searches
 import Control.Parallel.Strategies
 --import Util
 import Logging                    
+import Data.List (sort)
+import Data.Maybe (catMaybes)
 import Data.Vector (Vector, (!))
                                
 generateOrder :: Vector (Maybe (Food, Ant, Int, Direction))
+              -> Vector (Maybe (Ant, Int, Direction))
+              -> Vector (Maybe (Hill, Int, Direction))
+              -> Vector (Maybe Direction)
               -> Ant 
               -> RankedOrders 
-generateOrder un a = 
+generateOrder fd enmy hll un a = 
   let ap = dumbPoint $ pointAnt a
-      maybeDir = un ! ap in
-    case maybeDir of
-      Nothing -> RankedOrders a []
-      Just (_,_,_,dir) -> RankedOrders a [dir]
+      hillMove = case hll ! ap of
+                    Just (_, dst, dir) -> Just (dst, dir)
+                    Nothing -> Nothing
+      enemyMove = case enmy ! ap of
+                    Just (_, dst, dir) -> Just (dst, dir)
+                    Nothing -> Nothing
+      foodMove = case fd ! ap of
+                   Just (_, a', dst, dir) -> 
+                     if a == a'
+                     then Just (dst, dir)
+                     else Nothing
+                   Nothing -> Nothing
+      unseenMove = case un ! ap of
+                     Nothing -> Nothing
+                     Just d -> Just (1000, d) in
+    RankedOrders a $ 
+      map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove]
 
 {- |
  - Implement this function to create orders.
@@ -33,13 +51,15 @@ generateOrder un a =
  -}
 
 doTurn :: Logger -> GameParams -> BotMonad [FinalOrder]
-doTurn logger _ = do
+doTurn logger gp = do
   logString logger "Start Turn"
   gs <- ask
   let owner = ownership gs
       nFood = nearestFood gs owner
-      --unseen = nearestUnseen gp gs 
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood) . myAnts $ ants gs in
+      unseen = nearestUnseen gp gs 
+      enemy = nearestEnemy gs
+      badHills = nearestHill gs
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen) . myAnts $ ants gs in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        --seq orders $ logString logger "End Turn"
        return orders

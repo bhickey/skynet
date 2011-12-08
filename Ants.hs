@@ -22,6 +22,7 @@ module Ants
   , isDeadEnemyAnt
   , isHill
   , isEnemyHill
+  , isEnemy
   , isFood
   , isWater
   , visibleMetaTile
@@ -29,6 +30,8 @@ module Ants
     -- Utility functions
   , myAnts
   , enemyAnts
+  , myHills
+  , enemyHills
   
     -- Debugging
   --, renderWorld
@@ -185,7 +188,6 @@ data Hill = Hill
   , ownerHill :: !Owner
   } deriving (Show)
 
-{-
 isMy, isEnemy's :: Hill -> Bool
 isMy = (==Me).ownerHill
 isEnemy's = not.isMy
@@ -193,7 +195,6 @@ isEnemy's = not.isMy
 myHills, enemyHills :: [Hill] -> [Hill]
 myHills = filter isMy
 enemyHills = filter isEnemy's
--}
 
 --------------------------------------------------------------------------------
 -- Orders ----------------------------------------------------------------------

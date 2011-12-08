@@ -30,22 +30,32 @@ nearestFood gs av = bfs
   where searchFn Nothing _ = Nothing
         searchFn (Just (f, a, dist, _)) (d, _) = Just (f, a, dist + 1, fromDirection d)
 
-nearestEnemy :: GameState -> V.Vector (Maybe (Ant, Direction))
+nearestEnemy :: GameState -> V.Vector (Maybe (Ant, Int, Direction))
 nearestEnemy gs = bfs
   (vectorOf gs Nothing)
   (skipWater gs)
   searchFn
-  (map (\ a -> (pointAnt a, Just (a, North))) (enemyAnts $ ants gs))
+  (map (\ a -> (pointAnt a, Just (a, 0, North))) (enemyAnts $ ants gs))
   where searchFn Nothing _ = Nothing
-        searchFn (Just (a, _)) (d, _) = Just (a, fromDirection d)
+        searchFn (Just (a, dist, _)) (d, _) = Just (a, dist + 1, fromDirection d)
 
 nearestUnseen :: GameParams -> GameState -> V.Vector (Maybe Direction)
-nearestUnseen _ gs = --let
-  --sv = smartVector gp
-  --w = world gs in
-  --  bfs
+nearestUnseen gp gs = let
+  sv = smartVector gp
+  w = world gs in
+    bfs
     (vectorOf gs Nothing)
-  --  (skipWater gs)
-  --  (\ _ (d, _) -> Just d)
-  --  (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [Just North]))
+    (skipWater gs)
+    (\ _ (d, _) -> Just (fromDirection d))
+    (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [Just North]))
 
+nearestHill :: GameState -> Vector (Maybe (Hill, Int, Direction))
+nearestHill gs =
+  bfs
+  (vectorOf gs Nothing)
+  (skipWater gs)
+  searchFn
+  (map (\ h -> (pointHill h, Just (h, 0, North))) (enemyHills $ hills gs))
+  where searchFn Nothing _ = Nothing
+        searchFn (Just (a, dist, _)) (d, _) = Just (a, dist + 1, fromDirection d)
+  
