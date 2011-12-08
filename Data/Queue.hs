@@ -32,7 +32,7 @@ dequeue :: Queue a -> Queue a
 dequeue (Queue s) = (Queue $ drop 1 s)
 
 peek :: Queue a -> a
-peek (Queue s) = index s 1
+peek (Queue s) = index s 0
 
 null :: Queue a -> Bool
 null = S.null . seq
