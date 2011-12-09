@@ -40,7 +40,7 @@ generateOrder fd enmy hll unk uns a =
                    Nothing -> Nothing
       unseenMove = case uns ! ap of
                      Nothing -> Nothing
-                     Just (dst, dir) -> Just (dst + 4, dir)
+                     Just (dst, dir) -> Just (dst + 8, dir)
       unknownMove = case unk ! ap of
                      Nothing -> Nothing
                      Just d -> Just d in
