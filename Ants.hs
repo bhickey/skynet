@@ -19,6 +19,7 @@ module Ants
   , isLiveAnt
   , isDeadAnt
   , isLiveEnemyAnt
+  , isLiveFriendlyAnt
   , isDeadEnemyAnt
   , isHill
   , isEnemyHill
@@ -68,14 +69,17 @@ data MetaTile = MetaTile
   , visible :: !Visibility
   } deriving (Show)
 
-isLiveAnt, isDeadAnt, isLiveEnemyAnt, isDeadEnemyAnt, isHill, isEnemyHill, isFood, isWater :: Tile -> Bool
+isLiveAnt, isDeadAnt, isLiveEnemyAnt, isLiveFriendlyAnt, isDeadEnemyAnt, isHill, isEnemyHill, isFood, isWater :: Tile -> Bool
 
 isLiveAnt (LandTile (LiveAntItem _)) = True
 isLiveAnt _ = False
 
 isDeadAnt (LandTile (DeadAntItem _)) = True
 isDeadAnt _ = False
-
+ 
+isLiveFriendlyAnt (LandTile (LiveAntItem Me)) = True
+isLiveFriendlyAnt _ = False
+ 
 isLiveEnemyAnt (LandTile (LiveAntItem (Enemy _))) = True
 isLiveEnemyAnt _ = False
 

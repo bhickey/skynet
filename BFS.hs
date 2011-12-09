@@ -11,10 +11,11 @@ import qualified Data.Vector as V
 
 bfs :: V.Vector a 
    -> (SmartPoint -> Bool)
+   -> (SmartPoint -> Bool)
    -> (a -> (Direction, SmartPoint) -> a)
    -> [(SmartPoint, a)]
    -> V.Vector a
-bfs def incl fn pts =
+bfs def incl use fn pts =
   let delta = bfs' (Q.fromList pts) (I.fromList (map (dumbPoint.fst) pts)) in
     def // delta
   where bfs' q c =
@@ -27,5 +28,5 @@ bfs def incl fn pts =
                    dpts = map dumbPoint spts
                    vs = map (fn v) npts
                    c' = foldl (flip I.insert) c dpts
-                   q' = Q.enqueueAll (Q.dequeue q) (zip spts vs) in
+                   q' = Q.enqueueAll (Q.dequeue q) (filter (use.fst) (zip spts vs)) in
             (zip dpts vs) ++ (bfs' q' c')

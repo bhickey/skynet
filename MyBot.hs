@@ -18,7 +18,7 @@ import Data.Vector (Vector, (!))
 generateOrder :: Vector (Maybe (Food, Ant, Int, Direction))
               -> Vector (Maybe (Ant, Int, Direction))
               -> Vector (Maybe (Hill, Int, Direction))
-              -> Vector (Maybe Direction)
+              -> Vector (Maybe (Int, Direction))
               -> Ant 
               -> RankedOrders 
 generateOrder fd enmy hll un a = 
@@ -33,11 +33,11 @@ generateOrder fd enmy hll un a =
                    Just (_, a', dst, dir) -> 
                      if a == a'
                      then Just (dst, dir)
-                     else Nothing
+                     else Just (dst + 5, dir)
                    Nothing -> Nothing
       unseenMove = case un ! ap of
                      Nothing -> Nothing
-                     Just d -> Just (1000, d) in
+                     Just d -> Just d in
     RankedOrders a $ 
       map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove]
 
