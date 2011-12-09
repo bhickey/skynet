@@ -5,7 +5,6 @@ import BFS
 import Point
 import Neighbors
 
-import System.Random.Shuffle
 import Data.Vector ((!), Vector)
 import qualified Data.Vector as V
 
@@ -59,10 +58,22 @@ nearestUnseen gp gs = let
     bfs
     (vectorOf gs Nothing)
     (skipWater gs)
-    neverSkip
+    (skipAnt gs)
     searchFn
-    (unsafeShuffle
-      (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [Just (0, North)])))
+    (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [Just (0, North)]))
+    where searchFn Nothing _ = Nothing
+          searchFn (Just (dist, _)) (d, _) = Just (dist + 1, fromDirection d)
+
+nearestUnknown :: GameParams -> GameState -> V.Vector (Maybe (Int, Direction))
+nearestUnknown gp gs = let
+  sv = smartVector gp
+  w = world gs in
+    bfs
+    (vectorOf gs Nothing)
+    (skipWater gs)
+    (skipAnt gs)
+    searchFn
+    (zip (V.toList $ V.filter (\ v -> (isUnknown $ w ! (dumbPoint v))) sv) (cycle [Just (0, North)]))
     where searchFn Nothing _ = Nothing
           searchFn (Just (dist, _)) (d, _) = Just (dist + 1, fromDirection d)
   

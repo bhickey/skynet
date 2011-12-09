@@ -1,5 +1,5 @@
 #!/bin/bash
 mkdir -p bin
-ghc --make -O3 -outputdir bin -rtsopts -prof -auto -Wall -Werror -o bin/Skynet MyBot || exit 1
-#ghc --make -O3 -outputdir bin -rtsopts -Wall -Werror -o bin/Skynet MyBot  || exit 1
+#ghc --make -O3 -outputdir bin -rtsopts -prof -auto -Wall -Werror -o bin/Skynet MyBot || exit 1
+ghc --make -O3 -outputdir bin -rtsopts -Wall -Werror -o bin/Skynet MyBot  || exit 1
 cp bin/Skynet tools/Skynet

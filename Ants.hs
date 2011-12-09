@@ -14,6 +14,7 @@ module Ants
   , GameParams (..)
   , Visibility (..)
   , isUnobserved
+  , isUnknown
 
     -- Tile Functions
   , isLiveAnt
@@ -130,6 +131,10 @@ renderMetaTile (MetaTile t v) =
 isUnobserved :: MetaTile -> Bool
 isUnobserved (MetaTile _ Unobserved) = True
 isUnobserved _ = False
+
+isUnknown :: MetaTile -> Bool
+isUnknown (MetaTile UnknownTile _) = True
+isUnknown _ = False
 
 -- | Sets the tile to visible, if the tile is still unknown then it is land.
 visibleMetaTile :: MetaTile -> MetaTile

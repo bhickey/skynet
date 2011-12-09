@@ -27,13 +27,15 @@ generateOrder fd enmy hll un a =
                     Just (_, dst, dir) -> Just (dst, dir)
                     Nothing -> Nothing
       enemyMove = case enmy ! ap of
-                    Just (_, dst, dir) -> Just (dst, dir)
+                    Just (_, dst, dir) -> Just (dst + 5, dir)
                     Nothing -> Nothing
       foodMove = case fd ! ap of
                    Just (_, a', dst, dir) -> 
                      if a == a'
                      then Just (dst, dir)
-                     else Just (dst + 5, dir)
+                     else if isEnemy a'
+                          then Just (dst + 2, dir)
+                          else Nothing
                    Nothing -> Nothing
       unseenMove = case un ! ap of
                      Nothing -> Nothing
@@ -56,7 +58,7 @@ doTurn logger gp = do
   gs <- ask
   let owner = ownership gs
       nFood = nearestFood gs owner
-      unseen = nearestUnseen gp gs 
+      unseen = nearestUnknown gp gs 
       enemy = nearestEnemy gs
       badHills = nearestHill gs
       orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen) . myAnts $ ants gs in
