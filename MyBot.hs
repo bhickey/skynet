@@ -19,9 +19,10 @@ generateOrder :: Vector (Maybe (Food, Ant, Int, Direction))
               -> Vector (Maybe (Ant, Int, Direction))
               -> Vector (Maybe (Hill, Int, Direction))
               -> Vector (Maybe (Int, Direction))
+              -> Vector (Maybe (Int, Direction))
               -> Ant 
               -> RankedOrders 
-generateOrder fd enmy hll un a = 
+generateOrder fd enmy hll unk uns a = 
   let ap = dumbPoint $ pointAnt a
       hillMove = case hll ! ap of
                     Just (_, dst, dir) -> Just (dst, dir)
@@ -37,11 +38,14 @@ generateOrder fd enmy hll un a =
                           then Just (dst + 2, dir)
                           else Nothing
                    Nothing -> Nothing
-      unseenMove = case un ! ap of
+      unseenMove = case uns ! ap of
+                     Nothing -> Nothing
+                     Just (dst, dir) -> Just (dst + 4, dir)
+      unknownMove = case unk ! ap of
                      Nothing -> Nothing
                      Just d -> Just d in
     RankedOrders a $ 
-      map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove]
+      map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove]
 
 {- |
  - Implement this function to create orders.
@@ -58,10 +62,11 @@ doTurn logger gp = do
   gs <- ask
   let owner = ownership gs
       nFood = nearestFood gs owner
-      unseen = nearestUnknown gp gs 
+      unseen = nearestUnseen gp gs 
+      unknown = nearestUnknown gp gs 
       enemy = nearestEnemy gs
       badHills = nearestHill gs
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen) . myAnts $ ants gs in
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown) . myAnts $ ants gs in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        --seq orders $ logString logger "End Turn"
        return orders
