@@ -51,7 +51,7 @@ nearestEnemy gs = bfs
   where searchFn Nothing _ = Nothing
         searchFn (Just (a, dist, _)) (d, _) = Just (a, dist + 1, fromDirection d)
 
-nearestUnseen :: GameParams -> GameState -> V.Vector (Maybe (Int, Direction))
+nearestUnseen :: GameParams -> GameState -> V.Vector (Maybe (SmartPoint, Int, Direction))
 nearestUnseen gp gs = let
   sv = smartVector gp
   w = world gs in
@@ -60,9 +60,23 @@ nearestUnseen gp gs = let
     (skipWater gs)
     (skipAnt gs)
     searchFn
-    (zip (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv) (cycle [Just (0, North)]))
+    (zipWith 
+      (\ a (b,c) -> (a, Just (a, b, c))) 
+      (V.toList $ V.filter (\ v -> isUnobserved $ w ! (dumbPoint v)) sv)
+      (cycle [(0, North)]))
     where searchFn Nothing _ = Nothing
-          searchFn (Just (dist, _)) (d, _) = Just (dist + 1, fromDirection d)
+          searchFn (Just (pt, dist, _)) (d, _) = Just (pt, dist + 1, fromDirection d)
+
+toPoints:: GameState -> [(SmartPoint, Ant)] -> V.Vector (Maybe (Ant, Int, Direction))
+toPoints gs pts =
+  bfs
+  (vectorOf gs Nothing)
+  (skipWater gs)
+  neverSkip
+  searchFn
+  (map (\ (p,a) -> (p, Just (a, 0, North))) pts)
+  where searchFn Nothing _ = Nothing
+        searchFn (Just (a, dist, _)) (d, _) = Just (a, dist + 1, fromDirection d)
 
 nearestUnknown :: GameParams -> GameState -> V.Vector (Maybe (Int, Direction))
 nearestUnknown gp gs = let
@@ -76,7 +90,7 @@ nearestUnknown gp gs = let
     (zip (V.toList $ V.filter (\ v -> (isUnknown $ w ! (dumbPoint v))) sv) (cycle [Just (0, North)]))
     where searchFn Nothing _ = Nothing
           searchFn (Just (dist, _)) (d, _) = Just (dist + 1, fromDirection d)
-  
+
 nearestHill :: GameState -> Vector (Maybe (Hill, Int, Direction))
 nearestHill gs =
   bfs

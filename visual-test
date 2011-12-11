@@ -2,7 +2,7 @@
 ./compile || exit 1
 cd tools
 ./playgame.py \
- -m maps/random_walk/random_walk_03p_02.map  \
+ -m maps/multi_hill_maze/maze_03p_01.map \
  ../bin/Skynet \
  "python sample_bots/python/HunterBot.py" \
  "python sample_bots/python/GreedyBot.py" \

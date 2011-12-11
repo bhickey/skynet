@@ -12,17 +12,18 @@ import Control.Parallel.Strategies
 --import Util
 import Logging                    
 import Data.List (sort)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Vector (Vector, (!))
                                
 generateOrder :: Vector (Maybe (Food, Ant, Int, Direction))
               -> Vector (Maybe (Ant, Int, Direction))
               -> Vector (Maybe (Hill, Int, Direction))
+              -> Vector (Maybe (SmartPoint, Int, Direction))
               -> Vector (Maybe (Int, Direction))
-              -> Vector (Maybe (Int, Direction))
+              -> Vector (Maybe (Ant, Int, Direction))
               -> Ant 
               -> RankedOrders 
-generateOrder fd enmy hll unk uns a = 
+generateOrder fd enmy hll uns unk huns a = 
   let ap = dumbPoint $ pointAnt a
       hillMove = case hll ! ap of
                     Just (_, dst, dir) -> Just (dst, dir)
@@ -38,14 +39,22 @@ generateOrder fd enmy hll unk uns a =
                           then Just (dst + 2, dir)
                           else Nothing
                    Nothing -> Nothing
+      myHillMove = case huns ! ap of
+                     Nothing -> Nothing
+                     Just (a', dst, dir) ->
+                      if a == a'
+                      then case enemyMove of
+                        Nothing -> Nothing
+                        Just (eDst, _) -> Just (max dst (eDst - 1), dir)
+                      else Nothing
       unseenMove = case uns ! ap of
                      Nothing -> Nothing
-                     Just (dst, dir) -> Just (dst + 8, dir)
+                     Just (_, dst, dir) -> Just (dst + 35, dir)
       unknownMove = case unk ! ap of
                      Nothing -> Nothing
                      Just d -> Just d in
     RankedOrders a $ 
-      map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove]
+      map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove, myHillMove]
 
 {- |
  - Implement this function to create orders.
@@ -62,14 +71,23 @@ doTurn logger gp = do
   gs <- ask
   let owner = ownership gs
       nFood = nearestFood gs owner
-      unseen = nearestUnseen gp gs 
+      unseen = (nearestUnseen gp gs)
+      hillUnseen = toUnseen gs owner unseen (myHills $ hills gs)
       unknown = nearestUnknown gp gs 
       enemy = nearestEnemy gs
       badHills = nearestHill gs
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown) . myAnts $ ants gs in
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown hillUnseen) . myAnts $ ants gs in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        --seq orders $ logString logger "End Turn"
        return orders
+
+toUnseen :: GameState 
+         -> Vector Ant
+         -> Vector (Maybe (SmartPoint, Int, Direction))
+         -> [Hill]
+         -> Vector (Maybe (Ant, Int, Direction))
+toUnseen gs av un hl =
+  toPoints gs (map (\ (x,_,_) -> (x, av ! (dumbPoint x))) $ mapMaybe (\ h -> un ! (dumbPoint (pointHill h))) hl)
 
 
 -- | This runs the game
