@@ -20,12 +20,11 @@ generateOrder :: Vector (Maybe (Food, Ant, Int, Direction)) -- food
               -> Vector (Maybe (Ant, Int, Direction))       -- enemy ants
               -> Vector (Maybe (Hill, Int, Direction))      -- enemy hills
               -> Vector (Maybe (SmartPoint, Int, Direction)) -- unseen
-              -> Vector (Maybe (Int, Direction))             -- perimeter
               -> Vector (Maybe (Int, Direction))             -- unknown
               -> Vector (Maybe (Ant, Int, Direction))        -- hill unseen
               -> Ant 
               -> RankedOrders 
-generateOrder fd enmy hll uns perim unk huns a = 
+generateOrder fd enmy hll uns unk huns a = 
   let ap = dumbPoint $ pointAnt a
       hillMove = case hll ! ap of
                     Just (_, dst, dir) -> Just (dst, dir)
@@ -51,17 +50,11 @@ generateOrder fd enmy hll uns perim unk huns a =
                       else Nothing
       unseenMove = case uns ! ap of
                      Nothing -> Nothing
-                     Just (_, dst, dir) -> Just (dst + 35, dir)
-      perimeterMove = case perim ! ap of
-                     Nothing -> Nothing
-                     Just (dst, dir) -> 
-                       case enemyMove of
-                         Nothing -> Just (dst + 1000, dir)
-                         Just (eDst, _) -> Just (eDst, dir)
+                     Just (_, dst, dir) -> Just (4 * dst + 15, dir)
       unknownMove = case unk ! ap of
                      Nothing -> Nothing
-                     Just (dst, dir) -> Just (dst + 10, dir) in
-    (integrateMoves a $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove, myHillMove, perimeterMove])
+                     Just (dst, dir) -> Just (dst, dir) in
+    (integrateMoves a $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove, myHillMove])
 
 integrateMoves :: Ant -> [(Int, Direction)] -> RankedOrders
 integrateMoves a mvs =
@@ -77,7 +70,7 @@ integrateMoves a mvs =
     (Neighbors 0.0 0.0 0.0 0.0)
     (map (\ (dist, dir) -> ((invSqrt dist), dir)) mvs)
     where compareSnd (_,s) (_,t) = compare t s
-          invSqrt x = (1.0::Float) / (sqrt (fromIntegral x))
+          invSqrt x = (1.0::Float) / (fromIntegral x)
 
 {- |
  - Implement this function to create orders.
@@ -95,12 +88,11 @@ doTurn logger gp = do
   let owner = ownership gs
       nFood = nearestFood gs owner
       unseen = nearestUnseen gp gs
-      perimeter = nearestPerimeter gp gs
       hillUnseen = toUnseen gs owner unseen (myHills $ hills gs)
       unknown = nearestUnknown gp gs 
       enemy = nearestEnemy gs
       badHills = nearestHill gs
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen perimeter unknown hillUnseen) . myAnts $ ants gs in
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown hillUnseen) . myAnts $ ants gs in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        --seq orders $ logString logger "End Turn"
        return orders

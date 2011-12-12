@@ -63,7 +63,7 @@ nearestUnseen gp gs = let
     bfs
     (vectorOf gs Nothing)
     (skipWater gs)
-    (skipAnt gs)
+    neverSkip
     searchFn
     (zipWith 
       (\ a (b,c) -> (a, Just (a, b, c))) 
@@ -90,7 +90,7 @@ nearestUnknown gp gs = let
     bfs
     (vectorOf gs Nothing)
     (skipWater gs)
-    (skipFriendly gs)
+    neverSkip
     searchFn
     (zip (V.toList $ V.filter (\ v -> (isUnknown $ w ! (dumbPoint v))) sv) (cycle [Just (0, North)]))
     where searchFn Nothing _ = Nothing
@@ -120,4 +120,3 @@ nearestHill gs =
   (map (\ h -> (pointHill h, Just (h, 0, North))) (enemyHills $ hills gs))
   where searchFn Nothing _ = Nothing
         searchFn (Just (a, dist, _)) (d, _) = Just (a, dist + 1, fromDirection d)
-  
