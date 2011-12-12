@@ -9,8 +9,11 @@ import Control.Monad.ST
 import Data.List (isPrefixOf, foldl')
 import Data.Char (digitToInt)
 import Data.Maybe
+import Data.Vector ((!))
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
+
+import qualified Data.Set as S
 
 import System.IO
 
@@ -128,24 +131,39 @@ modifyWorld mw f p = do
 
 
 gameLoop :: GameParams 
+         -> Maybe GameState
          -> BotMonad [FinalOrder]
          -> World
          -> [String] -- input
          -> IO ()
-gameLoop gp doTurn w (line:input)
+gameLoop gp mgs doTurn w (line:input)
   | "turn" `isPrefixOf` line = do
       hPutStrLn stderr line
       time <- getCurrentTime
       let cs = break (isPrefixOf "go") input
-          gs = foldl' (updateGameState gp) (GameState w [] [] [] time) (fst cs)
+          tgs = foldl' (updateGameState gp) (GameState w [] [] [] time) (fst cs)
+          gs = finalizeGameState tgs mgs
       gen <- newStdGen
       orders <- runBotMonad doTurn gs gen
       mapM_ (issueOrder gp) orders
       finishTurn
-      gameLoop gp doTurn (V.map clearMetaTile $ world gs) (tail $ snd cs) -- clear world for next turn
+      gameLoop gp (Just gs) doTurn (V.map clearMetaTile $ world gs) (tail $ snd cs) -- clear world for next turn
   | "end" `isPrefixOf` line = endGame input
-  | otherwise = gameLoop gp doTurn w input
-gameLoop _ _ _ [] = endGame []
+  | otherwise = gameLoop gp mgs doTurn w input
+gameLoop _ _ _ _ [] = endGame []
+
+finalizeGameState :: GameState -> Maybe GameState -> GameState
+finalizeGameState  tgs Nothing = tgs
+finalizeGameState (GameState w a f h st) (Just (GameState _ a' f' _ _)) = let
+  oldFood = filter unseenFood f'
+  oldAnts = filter unseenAnts (enemyAnts $ a') in
+  GameState w (unique a oldAnts) (unique f oldFood) h st
+  where unseenFood fp = isUnobserved $ w ! (dumbPoint fp)
+        unseenAnts ap = isUnobserved $ w ! (dumbPoint $ pointAnt ap)
+        unique [] [] = []
+        unique [] y = y
+        unique x [] = x
+        unique x y = S.toList $ S.intersection (S.fromList x) (S.fromList y)
 
 game :: (GameParams -> BotMonad [FinalOrder]) -> IO ()
 game doTurn = do
@@ -153,7 +171,7 @@ game doTurn = do
   let cs = break (isPrefixOf "ready") $ lines content
       gp = createParams $ map (tuplify2.words) (fst cs)
   finishTurn
-  gameLoop gp (doTurn gp) (initialWorld gp) (tail $ snd cs)
+  gameLoop gp Nothing (doTurn gp) (initialWorld gp) (tail $ snd cs)
 
 
 
