@@ -10,7 +10,7 @@ import Data.Vector ((//))
 import qualified Data.Vector as V
 
 bfs :: V.Vector a 
-   -> (SmartPoint -> Bool)
+   -> (SmartPoint -> SmartPoint -> Bool)
    -> (SmartPoint -> Bool)
    -> (a -> (Direction, SmartPoint) -> a)
    -> [(SmartPoint, a)]
@@ -22,7 +22,7 @@ bfs def incl use fn pts =
           if Q.null q
           then []
           else let (pt, v) = Q.peek q
-                   npts = filter (\ (_, p) -> I.notMember (dumbPoint p) c && incl p) $
+                   npts = filter (\ (_, p) -> I.notMember (dumbPoint p) c && incl p pt) $
                      F.toList $ (withDirections.neighbors) pt
                    spts = map snd npts
                    dpts = map dumbPoint spts

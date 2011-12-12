@@ -8,14 +8,19 @@ import Neighbors
 import Data.Vector ((!), Vector)
 import qualified Data.Vector as V
 
-skipWater :: GameState -> SmartPoint -> Bool
-skipWater gs p = (not.isWater.tile) ((world gs) ! (dumbPoint p))
+skipWater :: GameState -> SmartPoint -> SmartPoint -> Bool
+skipWater gs p _ = (not.isWater.tile) ((world gs) ! (dumbPoint p))
 
 skipAnt :: GameState -> SmartPoint -> Bool
 skipAnt gs p = (not.isLiveAnt.tile) ((world gs) ! (dumbPoint p))
 
 skipFriendly :: GameState -> SmartPoint -> Bool
 skipFriendly gs p = (not.isLiveFriendlyAnt.tile) ((world gs) ! (dumbPoint p))
+
+skipToUnseen :: GameState -> SmartPoint -> SmartPoint -> Bool
+skipToUnseen gs dest orig =
+  ((not.isUnobserved) ((world gs) ! (dumbPoint orig))) && (isUnobserved ((world gs) ! (dumbPoint dest))) 
+  && (skipWater gs dest orig)
 
 neverSkip :: SmartPoint -> Bool
 neverSkip _ = True
@@ -85,12 +90,26 @@ nearestUnknown gp gs = let
     bfs
     (vectorOf gs Nothing)
     (skipWater gs)
-    (skipAnt gs)
+    (skipFriendly gs)
     searchFn
     (zip (V.toList $ V.filter (\ v -> (isUnknown $ w ! (dumbPoint v))) sv) (cycle [Just (0, North)]))
     where searchFn Nothing _ = Nothing
           searchFn (Just (dist, _)) (d, _) = Just (dist + 1, fromDirection d)
-
+ 
+nearestPerimeter :: GameParams -> GameState -> V.Vector (Maybe (Int, Direction))
+nearestPerimeter gp gs = let
+  sv = smartVector gp
+  w = world gs in
+    bfs
+    (vectorOf gs Nothing)
+    (skipToUnseen gs)
+    (skipAnt gs)
+    searchFn
+    ((map (\ h -> (pointHill h, Just (0, North))) (enemyHills $ hills gs)) ++
+     (zip (V.toList $ V.filter (\ v -> (isUnknown $ w ! (dumbPoint v))) sv) (cycle [Just (0, North)])))
+    where searchFn Nothing _ = Nothing
+          searchFn (Just (dist, _)) (d, _) = Just (dist + 1, fromDirection d)
+ 
 nearestHill :: GameState -> Vector (Maybe (Hill, Int, Direction))
 nearestHill gs =
   bfs

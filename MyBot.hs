@@ -15,21 +15,22 @@ import Data.List (sort)
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Vector (Vector, (!))
                                
-generateOrder :: Vector (Maybe (Food, Ant, Int, Direction))
-              -> Vector (Maybe (Ant, Int, Direction))
-              -> Vector (Maybe (Hill, Int, Direction))
-              -> Vector (Maybe (SmartPoint, Int, Direction))
-              -> Vector (Maybe (Int, Direction))
-              -> Vector (Maybe (Ant, Int, Direction))
+generateOrder :: Vector (Maybe (Food, Ant, Int, Direction)) -- food
+              -> Vector (Maybe (Ant, Int, Direction))       -- enemy ants
+              -> Vector (Maybe (Hill, Int, Direction))      -- enemy hills
+              -> Vector (Maybe (SmartPoint, Int, Direction)) -- unseen
+              -> Vector (Maybe (Int, Direction))             -- perimeter
+              -> Vector (Maybe (Int, Direction))             -- unknown
+              -> Vector (Maybe (Ant, Int, Direction))        -- hill unseen
               -> Ant 
               -> RankedOrders 
-generateOrder fd enmy hll uns unk huns a = 
+generateOrder fd enmy hll uns perim unk huns a = 
   let ap = dumbPoint $ pointAnt a
       hillMove = case hll ! ap of
                     Just (_, dst, dir) -> Just (dst, dir)
                     Nothing -> Nothing
       enemyMove = case enmy ! ap of
-                    Just (_, dst, dir) -> Just (dst + 5, dir)
+                    Just (_, dst, dir) -> Just (if dst > 4 then dst else dst + 8, dir)
                     Nothing -> Nothing
       foodMove = case fd ! ap of
                    Just (_, a', dst, dir) -> 
@@ -50,11 +51,14 @@ generateOrder fd enmy hll uns unk huns a =
       unseenMove = case uns ! ap of
                      Nothing -> Nothing
                      Just (_, dst, dir) -> Just (dst + 35, dir)
+      perimeterMove = case perim ! ap of
+                     Nothing -> Nothing
+                     Just (dst, dir) -> Just (dst, dir)
       unknownMove = case unk ! ap of
                      Nothing -> Nothing
                      Just d -> Just d in
     RankedOrders a $ 
-      map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove, myHillMove]
+      (map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove, myHillMove, perimeterMove])
 
 {- |
  - Implement this function to create orders.
@@ -71,12 +75,13 @@ doTurn logger gp = do
   gs <- ask
   let owner = ownership gs
       nFood = nearestFood gs owner
-      unseen = (nearestUnseen gp gs)
+      unseen = nearestUnseen gp gs
+      perimeter = nearestPerimeter gp gs
       hillUnseen = toUnseen gs owner unseen (myHills $ hills gs)
       unknown = nearestUnknown gp gs 
       enemy = nearestEnemy gs
       badHills = nearestHill gs
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown hillUnseen) . myAnts $ ants gs in
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen perimeter unknown hillUnseen) . myAnts $ ants gs in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        --seq orders $ logString logger "End Turn"
        return orders

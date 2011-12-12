@@ -2,10 +2,12 @@
 ./compile || exit 1
 cd tools
 ./playgame.py \
- -m maps/multi_hill_maze/maze_03p_01.map \
+ -m maps/random_walk/random_walk_05p_01.map \
  ../bin/Skynet \
  "python sample_bots/python/HunterBot.py" \
- "python sample_bots/python/GreedyBot.py" \
+ ../bin/Skynet \
+ "python sample_bots/python/HunterBot.py" \
+ "python sample_bots/python/HunterBot.py" \
  --turns 200 \
  -e --verbose --log_dir game_logs
 

@@ -61,7 +61,6 @@ data Tile = LandTile Item | WaterTile | UnknownTile deriving (Show,Eq)
 data Visibility = 
     Observed
   | Unobserved
-  | Predicted
   deriving (Show, Eq)
 
 -- | Elements of the world
@@ -125,8 +124,7 @@ renderMetaTile (MetaTile t v) =
     upper =
       case v of
         Observed -> toUpper
-        Unobserved -> id
-        Predicted -> id
+        _ -> id
 
 isUnobserved :: MetaTile -> Bool
 isUnobserved (MetaTile _ Unobserved) = True
