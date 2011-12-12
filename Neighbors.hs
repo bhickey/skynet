@@ -1,6 +1,6 @@
 module Neighbors (
  Direction(..),
- Neighbors,
+ Neighbors(..),
  directions,
  maxDirectionValue,
  minDirectionValue,
@@ -8,7 +8,8 @@ module Neighbors (
  minDirection,
  selectDirection,
  withDirections,
- fromDirection
+ fromDirection,
+ neighborList
 ) where
 import Control.Applicative
 
@@ -76,3 +77,5 @@ maxDirection = fst.maxDirectionValue
 minDirection :: Ord a => Neighbors a -> Direction
 minDirection = fst.minDirectionValue
 
+neighborList :: Neighbors a -> [(Direction, a)]
+neighborList (Neighbors n e s w) = zip [North,East,South,West] [n,e,s,w]

@@ -11,7 +11,8 @@ import Searches
 import Control.Parallel.Strategies
 --import Util
 import Logging                    
-import Data.List (sort)
+import Neighbors
+import Data.List (sortBy)
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Vector (Vector, (!))
                                
@@ -35,9 +36,9 @@ generateOrder fd enmy hll uns perim unk huns a =
       foodMove = case fd ! ap of
                    Just (_, a', dst, dir) -> 
                      if a == a'
-                     then Just (dst, dir)
+                     then Just (max (dst - 2) 0, dir)
                      else if isEnemy a'
-                          then Just (dst + 2, dir)
+                          then Just (dst, dir)
                           else Nothing
                    Nothing -> Nothing
       myHillMove = case huns ! ap of
@@ -53,12 +54,30 @@ generateOrder fd enmy hll uns perim unk huns a =
                      Just (_, dst, dir) -> Just (dst + 35, dir)
       perimeterMove = case perim ! ap of
                      Nothing -> Nothing
-                     Just (dst, dir) -> Just (dst, dir)
+                     Just (dst, dir) -> 
+                       case enemyMove of
+                         Nothing -> Just (dst + 1000, dir)
+                         Just (eDst, _) -> Just (eDst, dir)
       unknownMove = case unk ! ap of
                      Nothing -> Nothing
-                     Just d -> Just d in
-    RankedOrders a $ 
-      (map snd $ sort $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove, myHillMove, perimeterMove])
+                     Just (dst, dir) -> Just (dst + 10, dir) in
+    (integrateMoves a $ catMaybes $ [enemyMove, foodMove, unseenMove, hillMove, unknownMove, myHillMove, perimeterMove])
+
+integrateMoves :: Ant -> [(Int, Direction)] -> RankedOrders
+integrateMoves a mvs =
+    RankedOrders a $
+    map fst $ sortBy compareSnd $
+    neighborList $ foldl 
+    (\ (Neighbors n e s w) (d, dir) ->
+      case dir of 
+        North -> Neighbors (n + d) e s w 
+        East  -> Neighbors n (e + d) s w
+        South -> Neighbors n e (s + d) w
+        West  -> Neighbors n e s (w + d)) 
+    (Neighbors 0.0 0.0 0.0 0.0)
+    (map (\ (dist, dir) -> ((invSqrt dist), dir)) mvs)
+    where compareSnd (_,s) (_,t) = compare t s
+          invSqrt x = (1.0::Float) / (sqrt (fromIntegral x))
 
 {- |
  - Implement this function to create orders.
