@@ -25,6 +25,7 @@ module Ants
   , isHill
   , isEnemyHill
   , isEnemy
+  , isMe
   , isFood
   , isWater
   , visibleMetaTile
