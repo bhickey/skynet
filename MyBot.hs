@@ -3,6 +3,7 @@ module Main where
 import Control.Monad.Reader.Class
 
 import Ants
+import Combat
 import BotMonad
 import GameRunner
 import Point
@@ -15,7 +16,8 @@ import Neighbors
 import Data.List (sortBy)
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Vector (Vector, (!))
-                               
+import qualified Data.Map as M
+
 generateOrder :: Vector (Maybe (Food, Ant, Int, Direction)) -- food
               -> Vector (Maybe (Ant, Int, Direction))       -- enemy ants
               -> Vector (Maybe (Hill, Int, Direction))      -- enemy hills
@@ -92,9 +94,10 @@ doTurn logger gp = do
       unknown = nearestUnknown gp gs 
       enemy = nearestEnemy gs
       badHills = nearestHill gs
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown hillUnseen) . myAnts $ ants gs in
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown hillUnseen) . myAnts $ ants gs 
+      combat = findCombats gp (ants gs) in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
-       --seq orders $ logString logger "End Turn"
+       logString logger (show $ M.size combat)
        return orders
 
 toUnseen :: GameState 

@@ -2,7 +2,7 @@ module Combat (findCombats) where
 
 import Ants
 
-import GameParams
+import GameParams()
 import Point 
 
 import Data.Map (Map)
@@ -11,15 +11,15 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 
 data AntSearch = AntSearch
-  { searchRows :: Map Int [Ant]
-  , searchCols :: Map Int [Ant]
-  , searchBox :: BoundingBox }
+  (Map Int [Ant])
+  (Map Int [Ant])
+  BoundingBox 
 
 makeAntSearch :: GameParams -> [Ant] -> AntSearch
-makeAntSearch gp ants = let
+makeAntSearch gp ats = let
   bb = (rows gp, cols gp)
-  r = M.fromListWith (++) $ map (makeRows bb) ants
-  c = M.fromListWith (++) $ map (makeCols bb) ants in
+  r = M.fromListWith (++) $ map (makeRows bb) ats
+  c = M.fromListWith (++) $ map (makeCols bb) ats in
   AntSearch r c bb
   where makeRows bb a = ((row bb $ (dumbPoint.pointAnt) a), [a])
         makeCols bb a = ((col bb $ (dumbPoint.pointAnt) a), [a])
@@ -30,7 +30,7 @@ findAntsNear (AntSearch antRows antCols box@(r,c)) d a = let
   ar = row box ap
   ac = col box ac
   rowSet = toSet $ sliceRow antRows (ar - d) (ar + d)
-  colSet = toSet $ sliceCol antCols (ar - d) (ar + d) in
+  colSet = toSet $ sliceCol antCols (ac - d) (ac + d) in
   S.toList $ S.union rowSet colSet
   where slice mx mp low high =
           if low >= 0 && high < mx
