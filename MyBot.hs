@@ -35,7 +35,7 @@ generateOrder fd enmy hll uns unk huns a =
       foodMove = case fd ! ap of
                    Just (_, a', dst, dir) -> 
                      if a == a'
-                     then Just (max (dst - 2) 0, dir)
+                     then Just (1, dir)
                      else if isEnemy a'
                           then Just (dst, dir)
                           else Nothing
@@ -50,7 +50,7 @@ generateOrder fd enmy hll uns unk huns a =
                       else Nothing
       unseenMove = case uns ! ap of
                      Nothing -> Nothing
-                     Just (_, dst, dir) -> Just (4 * dst + 15, dir)
+                     Just (_, dst, dir) -> Just (dst + 4, dir)
       unknownMove = case unk ! ap of
                      Nothing -> Nothing
                      Just (dst, dir) -> Just (dst, dir) in
