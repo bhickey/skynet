@@ -28,7 +28,7 @@ findAntsNear :: AntSearch -> Int -> Ant -> [Ant]
 findAntsNear (AntSearch antRows antCols box@(r,c)) d a = let
   ap = (dumbPoint.pointAnt) a
   ar = row box ap
-  ac = col box ac
+  ac = col box ap
   rowSet = toSet $ sliceRow antRows (ar - d) (ar + d)
   colSet = toSet $ sliceCol antCols (ac - d) (ac + d) in
   S.toList $ S.union rowSet colSet
