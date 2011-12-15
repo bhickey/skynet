@@ -1,4 +1,4 @@
-module Combat (findCombats) where
+module Combat (findCombatants) where
 
 import Ants
 
@@ -46,8 +46,8 @@ findAntsNear (AntSearch antRows antCols box@(r,c)) d a = let
         sliceCol = slice c
         toSet mp = S.fromList $ concat $ M.elems mp
 
-findCombats :: GameParams -> [Ant] -> Map Ant [Ant]
-findCombats gp al =
+findCombatants :: GameParams -> [Ant] -> Map Ant [Ant]
+findCombatants gp al =
     let as = makeAntSearch gp al in
       M.fromList $
       filter ((any isMe).snd) $ 

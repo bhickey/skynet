@@ -95,7 +95,7 @@ doTurn logger gp = do
       enemy = nearestEnemy gs
       badHills = nearestHill gs
       orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown hillUnseen) . myAnts $ ants gs 
-      combat = findCombats gp (ants gs) in
+      combat = findCombatants gp (ants gs) in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
        logString logger (show $ M.size combat)
        return orders
