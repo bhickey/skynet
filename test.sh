@@ -1,4 +1,4 @@
 #!/bin/bash
 ./compile
 cd tools
-./test_bot.sh ../Skynet
+./test_bot.sh ../MyBot

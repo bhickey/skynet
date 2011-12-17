@@ -1,5 +1,7 @@
 #!/bin/bash
 mkdir -p bin
-#ghc --make -O3 -outputdir bin -fforce-recomp -rtsopts -prof -auto -Wall -Werror -o bin/Skynet MyBot || exit 1
-ghc --make -O3 -outputdir bin -fforce-recomp -rtsopts -Wall -Werror -o bin/Skynet MyBot || exit 1
+ghc --make -O3 -outputdir bin -fforce-recomp -rtsopts -static -optl-static -optl-pthread -Wall -Werror -o bin/Skynet MyBot || exit 1
 cp bin/Skynet tools/Skynet
+cp bin/Skynet MyBot
+strip -s MyBot
+zip Skynet.zip MyBot MyBot.ss

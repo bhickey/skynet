@@ -3,7 +3,6 @@ module Main where
 import Control.Monad.Reader.Class
 
 import Ants
-import Combat
 import BotMonad
 import GameRunner
 import Point
@@ -11,12 +10,10 @@ import Order
 import Searches
 import Control.Parallel.Strategies
 --import Util
-import Logging                    
 import Neighbors
 import Data.List (sortBy)
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Vector (Vector, (!))
-import qualified Data.Map as M
 
 generateOrder :: Vector (Maybe (Food, Ant, Int, Direction)) -- food
               -> Vector (Maybe (Ant, Int, Direction))       -- enemy ants
@@ -83,9 +80,10 @@ integrateMoves a mvs =
  - for each see Ants module for more information
  -}
 
+type Logger = Int
+
 doTurn :: Logger -> GameParams -> BotMonad [FinalOrder]
-doTurn logger gp = do
-  logString logger "Start Turn"
+doTurn _ gp = do
   gs <- ask
   let owner = ownership gs
       nFood = nearestFood gs owner
@@ -94,10 +92,9 @@ doTurn logger gp = do
       unknown = nearestUnknown gp gs 
       enemy = nearestEnemy gs
       badHills = nearestHill gs
-      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown hillUnseen) . myAnts $ ants gs 
-      combat = findCombatants gp (ants gs) in
+      orders = withStrategy (evalList rseq) . finalizeOrders . map (generateOrder nFood enemy badHills unseen unknown hillUnseen) . myAnts $ ants gs in
+      -- combat = findCombatants gp (ants gs) in
     do --logString logger ('\n':(showGrid (rows gp,cols gp) grid))
-       logString logger (show $ M.size combat)
        return orders
 
 toUnseen :: GameState 
@@ -113,6 +110,7 @@ toUnseen gs av un hl =
 main :: IO ()
 main =
  do
-  logs <- makeLogDirectory 
-  logger <- makeLogger logs "turn-times"
-  (game (doTurn logger))
+  --logs <- makeLogDirectory 
+  --logger <- makeLogger logs "turn-times"
+  --(game (doTurn logger))
+  (game (doTurn 0))
